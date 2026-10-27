@@ -573,7 +573,7 @@
             if (allowVinyl) {
                 let divV = document.createElement('div');
                 divV.className = 'list-item';
-                divV.innerHTML = `<span>Виниловая</span>`;
+                divV.innerHTML = `<span>Виниловая(Картинка,текстура)</span>`;
                 divV.onclick = () => {
                     state.film = "ВИНИЛОВАЯ ПЛЕНКА";
                     state.thickness = null;
@@ -586,7 +586,7 @@
 
             let divP = document.createElement('div');
             divP.className = 'list-item';
-            divP.innerHTML = `<span>Полиуретановая</span>`;
+            divP.innerHTML = `<span>Полиуретановая(Прозрачная)</span>`;
             divP.onclick = () => {
                 state.film = "ПОЛЕУРЕТАНОВАЯ ПЛЕНКА";
                 state.thickness = null;
