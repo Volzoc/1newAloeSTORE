@@ -46,12 +46,61 @@
         input[type="date"], input[type="time"] { color-scheme: dark; min-height: 58px; display: flex; align-items: center; }
         input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator { filter: invert(1) sepia(1) saturate(5) hue-rotate(150deg); cursor: pointer; opacity: 0.9; width: 24px; height: 24px; }
         select option { background: #030305; color: #ffffff; }
+        /* Карточки выбора точки — не вызывают системный picker WebView */
+        .point-choices { margin-bottom: 20px; }
+        .point-option { width: 100%; box-sizing: border-box; text-align: left; text-transform: none; letter-spacing: 0; font-size: 14px; font-weight: 700; color: var(--text-main); line-height: 1.45; min-height: 66px; }
+        .point-option small { display: block; color: var(--text-muted); font-size: 12px; font-weight: 500; margin-top: 3px; }
+        .point-option .point-check { color: var(--neon-blue); opacity: 0; font-size: 22px; transition: opacity 0.2s; margin-left: 12px; }
+        .point-option.active .point-check { opacity: 1; }
+        .point-option:focus-visible { outline: 2px solid var(--neon-blue); outline-offset: 2px; }
         .step { margin-bottom: 30px; animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; opacity: 0; }
         .addon-price { color: var(--neon-pink); font-weight: 800; text-shadow: 0 0 10px rgba(255,0,160,0.4);}
         .zone-price { color: var(--neon-blue); font-size: 13px; font-weight: 600; margin-left: 10px; }
         .corner-accent { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; border-top: 2px solid var(--neon-pink); border-right: 2px solid var(--neon-pink); border-radius: 0 12px 0 0; opacity: 0.3; pointer-events: none; }
         .warning-text { color: var(--neon-pink); font-size: 12px; margin-top: 5px; margin-bottom: 15px; display: block; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Единая тактильная анимация для всех интерактивных карточек и кнопок */
+        button, .card, .list-item { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        .card, .list-item, button { position: relative; overflow: hidden; transform: translateZ(0); transition: transform .18s cubic-bezier(.2,.8,.2,1), border-color .24s ease, background .24s ease, box-shadow .24s ease; }
+        .card:not(:disabled):active, .list-item:not(:disabled):active, button:not(:disabled):active,
+        .card.is-pressing, .list-item.is-pressing, button.is-pressing { transform: scale(.965); }
+        .card.active, .list-item.active, .point-option.active {
+            border-color: var(--neon-blue); background: rgba(0,243,255,.075);
+            box-shadow: 0 0 0 1px rgba(0,243,255,.12), 0 0 22px rgba(0,243,255,.24), inset 0 0 20px rgba(0,243,255,.06);
+        }
+        .card.active .icon-wrapper { transform: scale(1.06); }
+        .list-item.active::after, .card.active::after { content: '✓'; position: absolute; top: 10px; right: 11px; font-size: 13px; color: #030305; font-weight: 900; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--neon-blue); box-shadow: 0 0 12px rgba(0,243,255,.5); pointer-events:none; animation: popCheck .25s both; }
+        .card.active::after { top: 12px; right: 12px; }
+        .point-option.active::after { display: none; }
+        .tap-ripple { position: absolute; pointer-events: none; z-index: 4; aspect-ratio: 1; border-radius: 50%; background: rgba(255,255,255,.27); transform: translate(-50%,-50%) scale(0); animation: ripple .5s ease-out forwards; }
+        @keyframes ripple { to { transform: translate(-50%,-50%) scale(1); opacity: 0; } }
+        @keyframes popCheck { from { transform: scale(.45); opacity:0; } to { transform: scale(1); opacity:1; } }
+        .card:focus-visible, .list-item:focus-visible, button:focus-visible { outline: 2px solid var(--neon-blue); outline-offset: 3px; }
+        button:disabled { cursor: not-allowed; opacity: .65; transform:none!important; }
+        .point-option, .point-option:not(:disabled) { background: var(--bg-card); box-shadow: 0 4px 15px rgba(0,0,0,.45); text-shadow:none; border: 1px solid rgba(255,255,255,.12); padding: 15px 16px; margin-bottom: 12px; }
+        .point-option.active { background: rgba(0,243,255,.08); border-color:var(--neon-blue); box-shadow:0 0 18px rgba(0,243,255,.18); }
+        .point-option small { color: #b5b4c2; }
+        .point-option .point-check { opacity: .25; }
+        .point-option.active .point-check { opacity: 1; }
+        .bottom-bar { padding: 15px 20px; padding-bottom: max(17px, env(safe-area-inset-bottom)); gap: 14px; }
+        .bottom-bar #next-btn { min-width: 124px; max-width: 58%; padding: 15px 18px; flex-shrink:0; white-space: normal; }
+        .price { font-size: clamp(20px, 5vw, 28px); }
+        .review-lead { background: linear-gradient(120deg, rgba(0,243,255,.10), rgba(255,0,160,.06)); border:1px solid rgba(0,243,255,.25); padding:18px; border-radius:18px; margin: 12px 0 18px; }
+        .review-lead strong { display:block; color:var(--neon-blue); font-size:15px; margin-bottom:8px; }
+        .review-lead p { font-size:12px; color:#c4c3cf; line-height:1.65; margin:0; }
+        .review-section { background: rgba(20,20,35,.78); border:1px solid rgba(255,255,255,.10); border-radius:18px; padding:16px; margin-bottom:12px; }
+        .review-section-title { font-size:11px; font-weight:900; letter-spacing:1.1px; color:var(--neon-blue); text-transform:uppercase; margin-bottom:12px; }
+        .review-row { display:flex; justify-content:space-between; gap:16px; padding:9px 0; font-size:13px; line-height:1.5; border-top:1px solid rgba(255,255,255,.07); }
+        .review-row:first-of-type { border:0; padding-top:0; }
+        .review-key { color:#aaa9b8; flex:0 0 38%; }
+        .review-val { text-align:right; font-weight:700; overflow-wrap:anywhere; }
+        .review-total { font-size:22px; font-weight:900; color:var(--neon-blue); text-align:right; }
+        .review-note { font-size:12px; color:#aaa9b8; line-height:1.6; margin-top:16px; }
+        .choice-help { font-size:12px; color:#bbb9c8; line-height:1.6; margin:-7px 0 18px; }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
+        }
     </style>
 </head>
 <body>
@@ -129,7 +178,7 @@
         </div>
         
         <div id="photo-upload-block" class="hidden" style="margin-top: 20px;">
-            <div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (из наличия или Ваш вариант)</div>
+            <div class="subtitle" style="color:var(--neon-pink)">🖼 Изображение можно выбрать в магазине или предложить своё</div>
         </div>
     </div>
 
@@ -143,7 +192,7 @@
         <div id="kit-corpus-film-list"></div>
         <div id="kit-corpus-thickness" class="hidden" style="margin-top: 20px;"></div>
         <div id="kit-corpus-photo" class="hidden" style="margin-top: 20px;">
-            <div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (из наличия или Ваш вариант)</div>
+            <div class="subtitle" style="color:var(--neon-pink)">🖼 Изображение можно выбрать в магазине или предложить своё</div>
         </div>
     </div>
 
@@ -180,11 +229,15 @@
         <div class="subtitle" style="margin-bottom: 10px;">Время:</div>
         <input type="time" id="time-input" onchange="state.time = this.value">
         <div class="subtitle" style="margin-bottom: 10px;">Точка:</div>
-        <select id="point-input" onchange="state.point = this.value">
-            <option value="" disabled selected>Выберите точку...</option>
-            <option value="ТРЦ «СЕКРЕТ» (ул. Гагарина 65)">ТРЦ «СЕКРЕТ» (ул. Гагарина 65)</option>
-            <option value="ТРЦ «КОРОНА» (ул. Советская 200)">ТРЦ «КОРОНА» (ул. Советская 200)</option>
-        </select>
+        <!-- Кастомный выбор без системного select: не открывает picker поверх Telegram -->
+        <div id="point-input" class="point-choices" role="group" aria-label="Выберите точку">
+            <button type="button" class="list-item point-option" data-value="ТРЦ «СЕКРЕТ» (ул. Гагарина 65)" onclick="selectPoint(this)" aria-pressed="false">
+                <span>📍 ТРЦ «СЕКРЕТ» <small>(ул. Гагарина 65)</small></span><span class="point-check" aria-hidden="true">✓</span>
+            </button>
+            <button type="button" class="list-item point-option" data-value="ТРЦ «КОРОНА» (ул. Советская 200)" onclick="selectPoint(this)" aria-pressed="false">
+                <span>📍 ТРЦ «КОРОНА» <small>(ул. Советская 200)</small></span><span class="point-check" aria-hidden="true">✓</span>
+            </button>
+        </div>
     </div>
 
     <!-- Шаг 7: Номер -->
@@ -214,29 +267,86 @@
         <input type="tel" id="cert-phone" placeholder="+375..." oninput="state.certPhone = this.value">
     </div>
 
+
+    <!-- Шаг проверки заказа: клиент видит все детали перед отправкой -->
+    <div id="step-review" class="step hidden">
+        <div class="header-row">
+            <button class="back-btn" type="button" onclick="goBack(9)" aria-label="Вернуться к редактированию">←</button>
+            <div class="title">Проверка <span>заявки</span></div>
+        </div>
+        <div class="review-lead">
+            <strong>🌿 Всё верно?</strong>
+            <p>Проверьте услугу, стоимость и удобное время. После отправки сотрудник AloeStore свяжется с вами для подтверждения записи.</p>
+        </div>
+        <div id="review-content"></div>
+        <div class="review-note">Отправка заявки не является оплатой или автоматическим подтверждением записи.</div>
+    </div>
+
     <!-- Нижняя панель -->
     <div class="bottom-bar">
         <div>
             <div class="price-label">Итого:</div>
             <div class="price" id="total-price">0 BYN</div>
         </div>
-        <button id="next-btn" onclick="nextStep()">Далее</button>
+        <button type="button" class="hidden" id="next-btn" onclick="nextStep()">Далее</button>
     </div>
 
     <script>
+        // Эффект нажатия и лёгкий тактильный отклик поддерживаются на всех кнопках.
+        document.addEventListener('pointerdown', event => {
+            const el = event.target.closest('button, .card, .list-item');
+            if (!el || el.disabled) return;
+            el.classList.add('is-pressing');
+            const rect = el.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height) * 2.2;
+            const ripple = document.createElement('span');
+            ripple.className = 'tap-ripple';
+            ripple.style.width = size + 'px';
+            ripple.style.left = (event.clientX - rect.left) + 'px';
+            ripple.style.top = (event.clientY - rect.top) + 'px';
+            el.appendChild(ripple);
+            ripple.addEventListener('animationend', () => ripple.remove(), {once:true});
+        }, {passive:true});
+        for (const type of ['pointerup', 'pointercancel']) {
+            document.addEventListener(type, () => {
+                document.querySelectorAll('.is-pressing').forEach(el => el.classList.remove('is-pressing'));
+            }, {passive:true});
+        }
+        document.addEventListener('click', event => {
+            const el = event.target.closest('button, .card, .list-item');
+            if (!el || el.disabled) return;
+            try { window.Telegram?.WebApp?.HapticFeedback?.selectionChanged?.(); } catch(e) {}
+        }, {capture:true});
+        // Динамические карточки доступны также с клавиатуры.
+        const choiceObserver = new MutationObserver(() => {
+            document.querySelectorAll('.card:not([tabindex]), .list-item:not(button):not([tabindex])').forEach(el => {
+                el.tabIndex = 0;
+                el.setAttribute('role', 'button');
+            });
+        });
+        choiceObserver.observe(document.body, {subtree:true, childList:true});
+        document.addEventListener('keydown', event => {
+            const el = event.target.closest('.card, .list-item:not(button)');
+            if (!el || !['Enter',' '].includes(event.key)) return;
+            event.preventDefault(); el.click();
+        });
+
         // При обычном открытии HTML Telegram SDK может быть недоступен.
         const tg = window.Telegram?.WebApp || null;
         try {
             tg?.ready();
             tg?.expand();
             tg?.setHeaderColor('#030305');
+            // Избегаем случайного сворачивания мини-приложения при жестах в форме.
+            // Системную шапку Telegram по-прежнему можно потянуть вниз.
+            tg?.disableVerticalSwipes?.();
         } catch (error) {
             console.warn('Telegram WebApp:', error);
         }
 
         function notify(message) {
             try {
-                if (tg?.showAlert && tg.initData) return tg.showAlert(message);
+                if (tg?.showAlert && tg.platform && tg.platform !== 'unknown') return tg.showAlert(message);
             } catch (error) { console.warn(error); }
             window.alert(message);
         }
@@ -300,9 +410,11 @@
             current.classList.remove('hidden');
             state.step = stepNumber;
             const nextBtn = document.getElementById('next-btn');
+            // На шагах с автоматическим переходом убираем неработающую кнопку «Далее».
+            nextBtn.classList.toggle('hidden', ['step-device', 'step-zone', 'step-other-service'].includes(stepId));
             nextBtn.textContent = stepId === 'step-addons' ? 'Продолжить'
-                : stepId === 'step-phone' ? 'Заказать'
-                : stepId === 'step-cert' ? 'Оформить' : 'Далее';
+                : stepId === 'step-phone' || stepId === 'step-cert' ? 'Проверить'
+                : stepId === 'step-review' ? 'Отправить' : 'Далее';
             nextBtn.disabled = stepId === 'step-film' ? !state.thickness
                 : stepId === 'step-kit-corpus' ? !state.kit.corpusThickness
                 : stepId === 'step-kit-screen' ? !state.kit.screenThickness
@@ -341,6 +453,10 @@
                 renderAddons();
                 showStep('step-addons', 5);
             } else if (targetStep === 7) showStep('step-datetime', 6);
+            else if (targetStep === 9) {
+                if (state.device === 'Сертификат') showStep('step-cert', 8);
+                else showStep('step-phone', 7);
+            }
         }
 
         function selectDevice(device, el) {
@@ -390,6 +506,7 @@
                 const prices = BASE_PRICES[state.device][zone];
                 const div = document.createElement('div');
                 div.className = 'list-item';
+                if (state.zone === zone) div.classList.add('active');
                 
                 let priceStr = "";
                 if (prices[0] === 0) priceStr = "уточнить";
@@ -430,6 +547,7 @@
                 const prices = BASE_PRICES["Прочее"][srvName];
                 const div = document.createElement('div');
                 div.className = 'list-item';
+                if (state.zone === srvName) div.classList.add('active');
                 
                 let priceStr = prices[0] === 0 ? "уточнить" : `${prices[0]} / ${prices[1]} BYN`;
                 
@@ -741,6 +859,15 @@
             recalculateTotal();
         }
 
+        function selectPoint(button) {
+            state.point = button.dataset.value;
+            document.querySelectorAll('#point-input .point-option').forEach(option => {
+                const selected = option === button;
+                option.classList.toggle('active', selected);
+                option.setAttribute('aria-pressed', selected ? 'true' : 'false');
+            });
+        }
+
         function nextStep() {
             if (state.step === 2) {
                 state.model = (document.getElementById('model-input').value || '').trim();
@@ -765,7 +892,6 @@
             } else if (state.step === 6) {
                 state.date = document.getElementById('date-input').value;
                 state.time = document.getElementById('time-input').value;
-                state.point = document.getElementById('point-input').value;
                 if (!state.date || !state.time || !state.point) return notify('Выберите дату, время и точку');
                 const selectedDateTime = new Date(state.date + 'T' + state.time);
                 if (!Number.isFinite(selectedDateTime.getTime()) || selectedDateTime.getTime() - Date.now() < 5 * 60000)
@@ -773,9 +899,10 @@
                 showStep('step-phone', 7);
             } else if (state.step === 7) {
                 state.phone = document.getElementById('phone-input').value.trim();
-                if (!state.phone || state.phone.replace(/\D/g, '').length < 7)
+                if (!state.phone || state.phone.replace(/\D/g, '').length < 9)
                     return notify('Введите корректный номер телефона');
-                submitOrder();
+                renderReview();
+                showStep('step-review', 9);
             } else if (state.step === 8) {
                 state.certAmount = Number(document.getElementById('cert-input').value) || 0;
                 state.certDate = document.getElementById('cert-date').value;
@@ -787,8 +914,11 @@
                 const visitDateTime = new Date(state.certDate + 'T' + state.certTime);
                 if (!Number.isFinite(visitDateTime.getTime()) || visitDateTime.getTime() - Date.now() < 5 * 60000)
                     return notify('❌ Время уже прошло или осталось менее 5 минут');
-                if (!state.certPhone || state.certPhone.replace(/\D/g, '').length < 7)
+                if (!state.certPhone || state.certPhone.replace(/\D/g, '').length < 9)
                     return notify('Введите корректный номер телефона');
+                renderReview();
+                showStep('step-review', 9);
+            } else if (state.step === 9) {
                 submitOrder();
             }
         }
@@ -797,23 +927,29 @@
             document.getElementById('total-price').innerText = state.totalPrice + " BYN";
         }
 
-        function submitOrder() {
+        function formatDateRu(date) {
+            if (!date) return '—';
+            const parts = date.split('-').map(Number);
+            if (parts.length !== 3) return date;
+            return new Date(parts[0], parts[1]-1, parts[2], 12).toLocaleDateString('ru-RU', {
+                day:'numeric', month:'long', year:'numeric'
+            });
+        }
+
+        function getOrderData() {
             recalculateTotal();
             const k = state.kit;
-            const data = {
+            return {
                 device: state.device,
                 model: state.model || 'Не указана',
-                zone: state.zone,
+                zone: state.device === 'Сертификат' ? 'Подарочный сертификат' : state.zone,
                 film: state.isKit ? `Корпус: ${k.corpusFilm}; Экран: Полиуретановая` : (state.film || 'Не требуется'),
                 thickness: state.isKit ? `Корпус: ${k.corpusThickness}; Экран: ${k.screenThickness}` : (state.thickness || '-'),
                 texture: state.isKit ? `Экран: ${k.screenTexture}` : (state.texture || '-'),
                 kit: state.isKit ? {
-                    corpus_film: k.corpusFilm,
-                    corpus_thickness: k.corpusThickness,
-                    screen_film: 'Полиуретановая',
-                    screen_texture: k.screenTexture,
-                    screen_thickness: k.screenThickness,
-                    price: calculateKitPrice()
+                    corpus_film: k.corpusFilm, corpus_thickness: k.corpusThickness,
+                    screen_film: 'Полиуретановая', screen_texture: k.screenTexture,
+                    screen_thickness: k.screenThickness, price: calculateKitPrice()
                 } : null,
                 addons: state.addons.map(a => a.name).join(', ') || 'Нет',
                 date: state.device === 'Сертификат' ? state.certDate : state.date,
@@ -825,20 +961,153 @@
                 cert_amount: state.device === 'Сертификат' ? Number(state.certAmount) : 0,
                 photo_base64: null
             };
-            // Без Telegram бота нельзя считать заказ отправленным.
+        }
+
+        function describeProtection(d) {
+            if (d.is_cert) return 'Подарочный сертификат';
+            if (d.kit) return `Корпус: ${d.kit.corpus_film}, ${d.kit.corpus_thickness}; Экран: полиуретан, ${d.kit.screen_texture}, ${d.kit.screen_thickness}`;
+            return [d.film, d.texture !== '-' ? d.texture : null, d.thickness !== '-' ? d.thickness : null].filter(Boolean).join(' · ');
+        }
+
+        function buildMessages(d) {
+            const when = formatDateRu(d.date) + ' в ' + d.time;
+            if (d.is_cert) {
+                return {
+                    client: [
+                        '🌿 ALOESTORE · ВАША ЗАЯВКА', '',
+                        '🎁 Подарочный сертификат',
+                        '💳 Номинал: ' + d.cert_amount + ' BYN',
+                        '📅 Визит для оформления: ' + when,
+                        '📞 Контакт: ' + d.phone, '',
+                        'Спасибо за выбор AloeStore!',
+                        'Сотрудник свяжется с вами для подтверждения деталей. ✨'
+                    ].join('\n'),
+                    admin: [
+                        '🆕 ALOESTORE · НОВАЯ ЗАЯВКА',
+                        '🎁 ПОДАРОЧНЫЙ СЕРТИФИКАТ', '',
+                        '💳 Номинал: ' + d.cert_amount + ' BYN',
+                        '📅 Когда: ' + when,
+                        '📍 Точка: согласовать с клиентом',
+                        '📞 Телефон: ' + d.phone, '',
+                        '💰 ИТОГО: ' + d.price + ' BYN',
+                        '🕒 Статус: ожидает подтверждения'
+                    ].join('\n')
+                };
+            }
+            const addons = d.addons === 'Нет' ? 'Без допуслуг' : d.addons;
+            return {
+                client: [
+                    '🌿 ALOESTORE · ВАША ЗАЯВКА', '',
+                    '📱 ' + d.device + ' · ' + d.model,
+                    '🛡 Защита: ' + d.zone,
+                    '✨ ' + describeProtection(d),
+                    '➕ Дополнительно: ' + addons, '',
+                    '📅 ' + when,
+                    '📍 ' + d.point,
+                    '💳 Итого: ' + d.price + ' BYN', '',
+                    'Спасибо за обращение! Ожидайте подтверждения записи от сотрудника AloeStore. ✨'
+                ].join('\n'),
+                admin: [
+                    '🆕 ALOESTORE · НОВАЯ ЗАЯВКА', '',
+                    '📱 Устройство: ' + d.device,
+                    '🔎 Модель: ' + d.model,
+                    '🛡 Зона: ' + d.zone,
+                    '🎨 Материал: ' + describeProtection(d),
+                    '➕ Допуслуги: ' + addons, '',
+                    '📅 Дата и время: ' + when,
+                    '📍 Точка: ' + d.point,
+                    '📞 ТЕЛЕФОН: ' + d.phone, '',
+                    '💰 ИТОГО: ' + d.price + ' BYN',
+                    '🕒 Статус: ожидает подтверждения'
+                ].join('\n')
+            };
+        }
+
+        function makeReviewSection(title, rows) {
+            const section = document.createElement('section');
+            section.className = 'review-section';
+            const heading = document.createElement('div');
+            heading.className = 'review-section-title';
+            heading.textContent = title;
+            section.appendChild(heading);
+            rows.forEach(([key, val, isTotal]) => {
+                const line = document.createElement('div');
+                line.className = 'review-row';
+                const label = document.createElement('div');
+                label.className = 'review-key';
+                label.textContent = key;
+                const value = document.createElement('div');
+                value.className = isTotal ? 'review-total' : 'review-val';
+                value.textContent = String(val == null ? '—' : val);
+                line.append(label, value);
+                section.appendChild(line);
+            });
+            return section;
+        }
+
+        function renderReview() {
+            const d = getOrderData();
+            const root = document.getElementById('review-content');
+            root.replaceChildren(); // текст модели и телефона выводится только через textContent, без HTML-инъекций.
+            if (d.is_cert) {
+                root.appendChild(makeReviewSection('🎁 Сертификат', [
+                    ['Номинал', d.cert_amount + ' BYN'],
+                    ['Дата визита', formatDateRu(d.date)],
+                    ['Время', d.time],
+                    ['Телефон', d.phone]
+                ]));
+            } else {
+                root.appendChild(makeReviewSection('📱 Устройство и защита', [
+                    ['Устройство', d.device],
+                    ['Модель', d.model],
+                    ['Зона', d.zone],
+                    ['Плёнка', describeProtection(d)],
+                    ['Доп. услуги', d.addons === 'Нет' ? 'Не выбраны' : d.addons]
+                ]));
+                root.appendChild(makeReviewSection('📅 Запись', [
+                    ['Дата', formatDateRu(d.date)],
+                    ['Время', d.time],
+                    ['Точка', d.point],
+                    ['Телефон', d.phone]
+                ]));
+            }
+            root.appendChild(makeReviewSection('💳 Стоимость', [['Итого', d.price + ' BYN', true]]));
+        }
+
+        let submitting = false;
+        function submitOrder() {
+            if (submitting) return;
+            const data = getOrderData();
+            const messages = buildMessages(data);
+            // Прежние поля оставлены для совместимости с работающим Telegram-ботом.
+            // Чтобы бот использовал новый вид сообщений, обработчик web_app_data
+            // должен отправлять клиенту client_message, администратору admin_message.
+            data.client_message = messages.client;
+            data.admin_message = messages.admin;
+            data.message_version = 2;
+            const payload = JSON.stringify(data);
+            const size = new TextEncoder().encode(payload).length;
+            if (size > 4096) {
+                return notify('Заявка получилась слишком длинной. Сократите название модели или комментарий и попробуйте ещё раз.');
+            }
+            // При открытии через меню/ссылку Telegram нет канала web_app_data.
             if (!tg || !tg.platform || tg.platform === 'unknown' || typeof tg.sendData !== 'function') {
-                console.info('Предпросмотр заказа:', data);
-                return notify('Заказ заполнен. Для отправки откройте магазин через кнопку в клавиатуре Telegram-бота. В обычном браузере заказ не отправляется.');
+                console.info('Демонстрация заявки (не отправлено):', data);
+                return notify('Предпросмотр готов. Для отправки откройте мини-приложение кнопкой в клавиатуре Telegram-бота. Из обычного браузера заявка не отправляется.');
             }
             if (tg.initDataUnsafe?.query_id || tg.initDataUnsafe?.user) {
-                return notify('Этот способ запуска Telegram не поддерживает отправку через sendData. Откройте магазин кнопкой в клавиатуре бота либо подключите серверный приём заказов.');
+                return notify('Мини-приложение открыто через меню или ссылку. Здесь sendData не передаёт заявку. Откройте его кнопкой клавиатуры бота либо подключите серверный приём заказов.');
             }
             try {
-                tg.sendData(JSON.stringify(data));
-                // Telegram сам закрывает мини-приложение после sendData при поддерживаемом способе запуска.
+                submitting = true;
+                document.getElementById('next-btn').disabled = true;
+                tg.sendData(payload);
+                // sendData инициирует передачу данных; факт получения подтверждает только бот.
             } catch (error) {
+                submitting = false;
+                document.getElementById('next-btn').disabled = false;
                 console.error('Ошибка отправки заказа:', error);
-                notify('Не удалось отправить заказ. Попробуйте заново через Telegram-бота.');
+                notify('Не удалось отправить заявку. Откройте магазин из бота и попробуйте ещё раз.');
             }
         }
     </script>
