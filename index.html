@@ -108,7 +108,7 @@
         <div id="other-service-list"></div>
     </div>
 
-    <!-- Шаг 4: Пленка (сложная логика) -->
+    <!-- Шаг 4: Пленка -->
     <div id="step-film" class="step hidden">
         <div class="header-row">
             <button class="back-btn" onclick="goBack(4)">←</button>
@@ -233,7 +233,6 @@
         document.getElementById('date-input').min = todayStr;
         document.getElementById('cert-date').min = todayStr;
 
-        // Базовые цены (0 = "от", -1 = уточнить)
         const BASE_PRICES = {
             "Телефон": { "Экран": [35, 60], "Корпус": [50, 80], "Комплект": [80, 130], "Торцы": [20, 40], "Линзы/Камера": [20, 20] },
             "Планшет": { "Экран": [75, 100], "Корпус": [80, 110], "Комплект": [150, 190], "Торцы": [20, 40], "Линзы/Камера": [20, 20] },
@@ -301,8 +300,6 @@
             }
 
             if (device === 'Прочее') { 
-                document.getElementById('model-title').innerHTML = "Уточнение";
-                document.getElementById('model-subtitle').innerText = "Введите детали";
                 renderOtherServices(); 
                 showStep('step-other-service', 3.5); 
             } else { 
@@ -313,6 +310,9 @@
 
         function renderModelStep() {
             const input = document.getElementById('model-input');
+            document.getElementById('model-title').innerHTML = "Ваша <span>модель</span>";
+            document.getElementById('model-subtitle').innerText = "Введите модель для расчета";
+            
             input.value = "";
             
             if (state.device === 'Ноутбук') input.placeholder = "Например, MacBook Air M2";
@@ -366,30 +366,37 @@
         function renderOtherServices() {
             const list = document.getElementById('other-service-list');
             list.innerHTML = '';
+            
             const services = [
-                { name: "Карта", hint: "банковская, ключ, id" },
+                { name: "Карта", hint: "банковская, ключ, ID" },
                 { name: "Игровая консоль", hint: "PlayStation 5, XBOX One" },
                 { name: "Парогенератор", hint: "xros 5, Drag X" },
-                { name: "Автомультимедиа", hint: "модель машины (Geely Coolray, LiXian L7)" },
-                { name: "Кейс наушников", hint: "модель наушников (AirPods 3)" }
+                { name: "Автомультимедиа", hint: "Geely Coolray, LiXian L7" },
+                { name: "Кейс наушников", hint: "AirPods 3" }
             ];
 
             services.forEach(srv => {
                 const div = document.createElement('div');
                 div.className = 'list-item';
-                div.innerHTML = `<span>${srv.name} <span class="zone-price">${srv.hint}</span></span>`;
+                div.innerHTML = `<span>${srv.name}</span>`;
+                
                 div.onclick = () => {
                     document.querySelectorAll('#other-service-list .list-item').forEach(c => c.classList.remove('active'));
                     div.classList.add('active');
                     
                     state.zone = srv.name;
                     
-                    // Просим ввести текст (без выпадающего списка)
-                    document.getElementById('model-title').innerHTML = "Уточнение";
-                    document.getElementById('model-subtitle').innerText = `Введите детали (${srv.hint}):`;
-                    document.getElementById('model-input').placeholder = `Введите ${srv.hint}`;
-                    document.getElementById('model-input').value = "";
+                    if (srv.name === "Карта") {
+                        document.getElementById('model-title').innerHTML = "Уточнение";
+                        document.getElementById('model-subtitle').innerText = "Введите детали";
+                        document.getElementById('model-input').placeholder = "Например: банковская";
+                    } else {
+                        document.getElementById('model-title').innerHTML = "Ваша <span>модель</span>";
+                        document.getElementById('model-subtitle').innerText = "Введите модель для расчета";
+                        document.getElementById('model-input').placeholder = "Например, " + srv.hint.split(',')[0];
+                    }
                     
+                    document.getElementById('model-input').value = "";
                     showStep('step-model', 2);
                 };
                 list.appendChild(div);
@@ -401,9 +408,7 @@
             list.innerHTML = '';
             let allowVinyl = true;
             
-            // Для ноутбука винил разрешен на крышках (но только стандартный), на экране - нет
             if (state.zone === "Экран") allowVinyl = false;
-            // Линзы/камера только полиуретан
             if (state.zone === "Линзы/Камера") {
                 allowVinyl = false;
                 document.getElementById('film-subtitle').innerText = "Только полиуретан (Глянец)";
@@ -489,10 +494,8 @@
                 premPrice = BASE_PRICES[state.device][state.zone][1];
             }
 
-            // Спец. цена для торцов
             if (state.zone === "Торцы") premPrice = 40;
 
-            // Для ноутбука винил только стандартный
             let options = [];
             if (state.film === "Виниловая" && state.device === "Ноутбук") {
                 options = [{ name: "Стандартная", price: stdPrice }];
@@ -538,7 +541,6 @@
             document.getElementById('next-btn').disabled = true;
         }
 
-        // --- Сложная логика для КОМПЛЕКТА ---
         function renderKitCorpus() {
             const list = document.getElementById('kit-corpus-film-list');
             list.innerHTML = '';
@@ -569,7 +571,6 @@
             container.innerHTML = '<div class="subtitle">Толщина корпуса:</div>';
             let prices = BASE_PRICES[state.device]["Корпус"];
             
-            // Если ноутбук и винил - только стандарт
             let options = [];
             if (filmType === "Виниловая" && state.device === "Ноутбук") {
                 options = [{name: "Стандартная", price: prices[0]}];
@@ -584,12 +585,17 @@
                 div.onclick = () => {
                     document.querySelectorAll('#kit-corpus-thickness .list-item').forEach(c => c.classList.remove('active'));
                     div.classList.add('active');
+                    
                     state.kit.corpusPrice = opt.price;
+                    state.totalPrice = state.kit.corpusPrice + state.kit.screenPrice;
+                    updateBottomBar(); 
+                    
                     showKitPhotoIfNeeded(filmType, opt.name);
                 };
                 container.appendChild(div);
             });
             container.classList.remove('hidden');
+            document.getElementById('next-btn').disabled = true;
         }
 
         function showKitPhotoIfNeeded(filmType, thickness) {
@@ -643,7 +649,11 @@
             divS.onclick = () => {
                 document.querySelectorAll('#kit-screen-thickness .list-item').forEach(c => c.classList.remove('active'));
                 divS.classList.add('active');
+                
                 state.kit.screenPrice = prices[0];
+                state.totalPrice = state.kit.corpusPrice + state.kit.screenPrice;
+                updateBottomBar();
+                
                 document.getElementById('next-btn').disabled = false;
             };
             container.appendChild(divS);
@@ -653,14 +663,17 @@
             divP.onclick = () => {
                 document.querySelectorAll('#kit-screen-thickness .list-item').forEach(c => c.classList.remove('active'));
                 divP.classList.add('active');
+                
                 state.kit.screenPrice = prices[1];
+                state.totalPrice = state.kit.corpusPrice + state.kit.screenPrice;
+                updateBottomBar();
+                
                 document.getElementById('next-btn').disabled = false;
             };
             container.appendChild(divP);
             container.classList.remove('hidden');
         }
 
-        // --- Допы ---
         function renderAddons() {
             const list = document.getElementById('addons-list');
             list.innerHTML = '';
@@ -675,9 +688,17 @@
             let availableAddons = [];
             
             if (state.device === "Телефон" || state.device === "Планшет") {
-                if (state.zone !== "Торцы") availableAddons.push({ name: "Оклейка торцов", price: 20 });
-                if (state.zone !== "Линзы/Камера") availableAddons.push({ name: "Оклейка линз/камеры", price: 20 });
-                // Чистка динамиков для ТЕЛЕФОНА и ПЛАНШЕТА
+                // Если НЕ выбраны торцы, корпус или комплект, предлагаем торцы
+                if (state.zone !== "Торцы" && state.zone !== "Корпус" && state.zone !== "Комплект") {
+                    availableAddons.push({ name: "Оклейка торцов", price: 20 });
+                }
+                
+                // Линзы предлагаем всегда, если это не сама зона линз
+                if (state.zone !== "Линзы/Камера") {
+                    availableAddons.push({ name: "Оклейка линз/камеры", price: 20 });
+                }
+                
+                // Чистку предлагаем всегда
                 availableAddons.push({ name: "Чистка динамиков", price: 15 });
             }
 
@@ -716,11 +737,11 @@
                 if (!state.thickness) return tg.showAlert("Выберите толщину");
                 renderAddons(); showStep('step-addons', 5);
             }
-            else if (state.step === 4.5) { // Корпус комплекта
+            else if (state.step === 4.5) {
                 renderKitScreen();
                 showStep('step-kit-screen', 4.6);
             }
-            else if (state.step === 4.6) { // Экран комплекта
+            else if (state.step === 4.6) {
                 renderAddons(); showStep('step-addons', 5);
             }
             else if (state.step === 5) { showStep('step-datetime', 6); }
