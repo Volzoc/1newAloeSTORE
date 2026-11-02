@@ -188,8 +188,9 @@
             <button class="back-btn" onclick="goBack(4)">←</button>
             <div class="title">Комплект: <span>Корпус</span></div>
         </div>
-        <div class="subtitle">Выберите плёнку и толщину для корпуса</div>
+        <div class="subtitle">Выберите материал, текстуру и толщину защиты корпуса</div>
         <div id="kit-corpus-film-list"></div>
+        <div id="kit-corpus-texture" class="hidden" style="margin-top: 20px;"></div>
         <div id="kit-corpus-thickness" class="hidden" style="margin-top: 20px;"></div>
         <div id="kit-corpus-photo" class="hidden" style="margin-top: 20px;">
             <div class="subtitle" style="color:var(--neon-pink)">🖼 Изображение можно выбрать в магазине или предложить своё</div>
@@ -378,11 +379,11 @@
             basePrice: 0, addons: [], totalPrice: 0, 
             certAmount: 0, certDate: null, certTime: null, certPhone: null,
             isKit: false,
-            kit: { corpusFilm: null, corpusThickness: null, corpusPrice: 0, screenTexture: null, screenThickness: null, screenPrice: 0 }
+            kit: { corpusFilm: null, corpusTexture: null, corpusThickness: null, corpusPrice: 0, screenTexture: null, screenThickness: null, screenPrice: 0 }
         };
 
         function emptyKit() {
-            return { corpusFilm: null, corpusThickness: null, corpusPrice: 0, screenTexture: null, screenThickness: null, screenPrice: 0 };
+            return { corpusFilm: null, corpusTexture: null, corpusThickness: null, corpusPrice: 0, screenTexture: null, screenThickness: null, screenPrice: 0 };
         }
 
         function calculateKitPrice() {
@@ -416,7 +417,7 @@
                 : stepId === 'step-phone' || stepId === 'step-cert' ? 'Проверить'
                 : stepId === 'step-review' ? 'Отправить' : 'Далее';
             nextBtn.disabled = stepId === 'step-film' ? !state.thickness
-                : stepId === 'step-kit-corpus' ? !state.kit.corpusThickness
+                : stepId === 'step-kit-corpus' ? (!state.kit.corpusThickness || (state.kit.corpusFilm === 'Полиуретановая' && !state.kit.corpusTexture))
                 : stepId === 'step-kit-screen' ? !state.kit.screenThickness
                 : false;
             recalculateTotal();
@@ -721,36 +722,78 @@
             document.getElementById('next-btn').disabled = true;
         }
 
+        // Для полиуретана корпуса (телефон, планшет, часы, ноутбук)
+        // выбор глянца или матовой текстуры обязателен. Для винила — не требуется.
         function renderKitCorpus() {
             const list = document.getElementById('kit-corpus-film-list');
             list.innerHTML = '';
-            const choices = ['Виниловая', 'Полиуретановая'];
-            choices.forEach(filmType => {
+            state.kit.corpusFilm = null;
+            state.kit.corpusTexture = null;
+            state.kit.corpusThickness = null;
+            state.kit.corpusPrice = 0;
+            recalculateTotal();
+            ['Виниловая', 'Полиуретановая'].forEach(filmType => {
                 const div = document.createElement('div');
                 div.className = 'list-item';
                 div.textContent = filmType + ' (Корпус)';
                 div.onclick = () => {
                     list.querySelectorAll('.list-item').forEach(c => c.classList.remove('active'));
                     div.classList.add('active');
-                    renderKitCorpusThickness(filmType);
+                    state.kit.corpusFilm = filmType;
+                    state.kit.corpusTexture = null;
+                    state.kit.corpusThickness = null;
+                    state.kit.corpusPrice = 0;
+                    document.getElementById('kit-corpus-thickness').classList.add('hidden');
+                    document.getElementById('kit-corpus-photo').classList.add('hidden');
+                    document.getElementById('next-btn').disabled = true;
+                    recalculateTotal();
+                    if (filmType === 'Полиуретановая') {
+                        renderKitCorpusTextures();
+                    } else {
+                        document.getElementById('kit-corpus-texture').classList.add('hidden');
+                        renderKitCorpusThickness(filmType);
+                    }
                 };
                 list.appendChild(div);
             });
+            document.getElementById('kit-corpus-texture').classList.add('hidden');
             document.getElementById('kit-corpus-thickness').classList.add('hidden');
             document.getElementById('kit-corpus-photo').classList.add('hidden');
             document.getElementById('next-btn').disabled = true;
         }
 
+        function renderKitCorpusTextures() {
+            const container = document.getElementById('kit-corpus-texture');
+            container.innerHTML = '<div class="subtitle">Текстура корпуса (полиуретан):</div>';
+            ['Глянец', 'Матовая'].forEach(opt => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.textContent = opt;
+                div.onclick = () => {
+                    container.querySelectorAll('.list-item').forEach(c => c.classList.remove('active'));
+                    div.classList.add('active');
+                    state.kit.corpusTexture = opt;
+                    state.kit.corpusThickness = null;
+                    state.kit.corpusPrice = 0;
+                    document.getElementById('next-btn').disabled = true;
+                    renderKitCorpusThickness('Полиуретановая');
+                    recalculateTotal();
+                };
+                container.appendChild(div);
+            });
+            container.classList.remove('hidden');
+            document.getElementById('kit-corpus-thickness').classList.add('hidden');
+            document.getElementById('next-btn').disabled = true;
+        }
+
         function renderKitCorpusThickness(filmType) {
             const container = document.getElementById('kit-corpus-thickness');
-            state.kit.corpusFilm = filmType;
             state.kit.corpusThickness = null;
             state.kit.corpusPrice = 0;
             recalculateTotal();
             container.innerHTML = '<div class="subtitle">Толщина корпуса:</div>';
 
-            // У ноутбука «Корпус» не является отдельной позицией прайса:
-            // для комплекта это две крышки (верхняя и нижняя).
+            // У ноутбука комплект защищает верхнюю и нижнюю крышки.
             const prices = state.device === 'Ноутбук'
                 ? [0, 1].map(i => BASE_PRICES['Ноутбук']['Верхняя крышка'][i] + BASE_PRICES['Ноутбук']['Нижняя крышка'][i])
                 : BASE_PRICES[state.device]['Корпус'];
@@ -767,7 +810,7 @@
                     state.kit.corpusThickness = opt.name;
                     state.kit.corpusPrice = opt.price;
                     document.getElementById('kit-corpus-photo').classList.toggle('hidden', filmType !== 'Виниловая');
-                    document.getElementById('next-btn').disabled = false;
+                    document.getElementById('next-btn').disabled = filmType === 'Полиуретановая' && !state.kit.corpusTexture;
                     recalculateTotal();
                 };
                 container.appendChild(div);
@@ -879,7 +922,7 @@
                 renderAddons();
                 showStep('step-addons', 5);
             } else if (state.step === 4.5) {
-                if (!state.kit.corpusThickness) return notify('Выберите плёнку и толщину для корпуса');
+                if (!state.kit.corpusThickness || (state.kit.corpusFilm === 'Полиуретановая' && !state.kit.corpusTexture)) return notify('Выберите плёнку, текстуру и толщину для корпуса');
                 // Экран перерисовываем только при первом посещении, иначе сохраняем выбор.
                 if (!state.kit.screenTexture) renderKitScreen();
                 showStep('step-kit-screen', 4.6);
@@ -945,9 +988,9 @@
                 zone: state.device === 'Сертификат' ? 'Подарочный сертификат' : state.zone,
                 film: state.isKit ? `Корпус: ${k.corpusFilm}; Экран: Полиуретановая` : (state.film || 'Не требуется'),
                 thickness: state.isKit ? `Корпус: ${k.corpusThickness}; Экран: ${k.screenThickness}` : (state.thickness || '-'),
-                texture: state.isKit ? `Экран: ${k.screenTexture}` : (state.texture || '-'),
+                texture: state.isKit ? `Корпус: ${k.corpusTexture || "без текстуры"}; Экран: ${k.screenTexture}` : (state.texture || '-'),
                 kit: state.isKit ? {
-                    corpus_film: k.corpusFilm, corpus_thickness: k.corpusThickness,
+                    corpus_film: k.corpusFilm, corpus_texture: k.corpusTexture || "-", corpus_thickness: k.corpusThickness,
                     screen_film: 'Полиуретановая', screen_texture: k.screenTexture,
                     screen_thickness: k.screenThickness, price: calculateKitPrice()
                 } : null,
@@ -965,7 +1008,7 @@
 
         function describeProtection(d) {
             if (d.is_cert) return 'Подарочный сертификат';
-            if (d.kit) return `Корпус: ${d.kit.corpus_film}, ${d.kit.corpus_thickness}; Экран: полиуретан, ${d.kit.screen_texture}, ${d.kit.screen_thickness}`;
+            if (d.kit) return `Корпус: ${d.kit.corpus_film}${d.kit.corpus_texture && d.kit.corpus_texture !== '-' ? ", " + d.kit.corpus_texture : ""}, ${d.kit.corpus_thickness}; Экран: полиуретан, ${d.kit.screen_texture}, ${d.kit.screen_thickness}`;
             return [d.film, d.texture !== '-' ? d.texture : null, d.thickness !== '-' ? d.thickness : null].filter(Boolean).join(' · ');
         }
 
