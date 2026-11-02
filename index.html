@@ -50,6 +50,7 @@
         .addon-price { color: var(--neon-pink); font-weight: 800; text-shadow: 0 0 10px rgba(255,0,160,0.4);}
         .zone-price { color: var(--neon-blue); font-size: 13px; font-weight: 600; margin-left: 10px; }
         .corner-accent { position: absolute; top: 20px; right: 20px; width: 40px; height: 40px; border-top: 2px solid var(--neon-pink); border-right: 2px solid var(--neon-pink); border-radius: 0 12px 0 0; opacity: 0.3; pointer-events: none; }
+        .warning-text { color: var(--neon-pink); font-size: 12px; margin-top: 5px; margin-bottom: 15px; display: block; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -67,22 +68,22 @@
         <div class="title">Что <span>оклеиваем?</span></div>
         <div class="subtitle">Выберите девайс</div>
         <div class="grid" id="device-grid">
-            <div class="card" onclick="selectDevice('Телефон')"><div class="icon-wrapper"><span class="icon">📱</span></div>Телефон</div>
-            <div class="card" onclick="selectDevice('Планшет')"><div class="icon-wrapper"><span class="icon">📟</span></div>Планшет</div>
-            <div class="card" onclick="selectDevice('Смарт-часы')"><div class="icon-wrapper"><span class="icon">⌚</span></div>Часы</div>
-            <div class="card" onclick="selectDevice('Ноутбук')"><div class="icon-wrapper"><span class="icon">💻</span></div>Ноутбук</div>
-            <div class="card" onclick="selectDevice('Прочее')"><div class="icon-wrapper"><span class="icon">🔧</span></div>Прочее</div>
-            <div class="card" onclick="selectDevice('Сертификат')"><div class="icon-wrapper"><span class="icon">🎁</span></div>Сертификат</div>
+            <div class="card" onclick="selectDevice('Телефон', this)"><div class="icon-wrapper"><span class="icon">📱</span></div>Телефон</div>
+            <div class="card" onclick="selectDevice('Планшет', this)"><div class="icon-wrapper"><span class="icon">📟</span></div>Планшет</div>
+            <div class="card" onclick="selectDevice('Смарт-часы', this)"><div class="icon-wrapper"><span class="icon">⌚</span></div>Часы</div>
+            <div class="card" onclick="selectDevice('Ноутбук', this)"><div class="icon-wrapper"><span class="icon">💻</span></div>Ноутбук</div>
+            <div class="card" onclick="selectDevice('Прочее', this)"><div class="icon-wrapper"><span class="icon">🔧</span></div>Прочее</div>
+            <div class="card" onclick="selectDevice('Сертификат', this)"><div class="icon-wrapper"><span class="icon">🎁</span></div>Сертификат</div>
         </div>
     </div>
 
-    <!-- Шаг 2: Модель -->
+    <!-- Шаг 2: Модель / Уточнение -->
     <div id="step-model" class="step hidden">
         <div class="header-row">
             <button class="back-btn" onclick="goBack(1)">←</button>
-            <div class="title">Ваша <span>модель</span></div>
+            <div class="title" id="model-title">Ваша <span>модель</span></div>
         </div>
-        <div class="subtitle">Введите модель для расчета</div>
+        <div class="subtitle" id="model-subtitle">Введите модель для расчета</div>
         <input type="text" id="model-input" placeholder="Например, iPhone 15 Pro" oninput="state.model = this.value">
     </div>
 
@@ -93,10 +94,11 @@
             <div class="title">Зона <span>оклейки</span></div>
         </div>
         <div class="subtitle">Что именно обрабатываем?</div>
+        <span class="warning-text" id="zone-warning"></span>
         <div id="zone-list"></div>
     </div>
 
-    <!-- Шаг 3.5: Прочее -->
+    <!-- Шаг 3.5: Прочее (выбор услуги) -->
     <div id="step-other-service" class="step hidden">
         <div class="header-row">
             <button class="back-btn" onclick="goBack(1)">←</button>
@@ -106,13 +108,14 @@
         <div id="other-service-list"></div>
     </div>
 
-    <!-- Шаг 4: Пленка -->
+    <!-- Шаг 4: Пленка (сложная логика) -->
     <div id="step-film" class="step hidden">
         <div class="header-row">
             <button class="back-btn" onclick="goBack(4)">←</button>
             <div class="title">Выбор <span>пленки</span></div>
         </div>
-        <div class="subtitle">Тип материала</div>
+        <div class="subtitle" id="film-subtitle">Тип материала</div>
+        
         <div id="film-list"></div>
         
         <div id="texture-list" class="hidden" style="margin-top: 20px;">
@@ -129,6 +132,31 @@
             <div class="subtitle">Загрузите картинку для печати (или выберите на месте):</div>
             <input type="file" id="custom-image" accept="image/*" style="background: none; border: 1px dashed var(--neon-blue);">
         </div>
+    </div>
+
+    <!-- Шаг 4.5: Логика для Комплекта -->
+    <div id="step-kit-corpus" class="step hidden">
+        <div class="header-row">
+            <button class="back-btn" onclick="goBack(4)">←</button>
+            <div class="title">Комплект: <span>Корпус</span></div>
+        </div>
+        <div class="subtitle">Выберите пленку и толщину для корпуса</div>
+        <div id="kit-corpus-film-list"></div>
+        <div id="kit-corpus-thickness" class="hidden" style="margin-top: 20px;"></div>
+        <div id="kit-corpus-photo" class="hidden" style="margin-top: 20px;">
+            <div class="subtitle">Фото для печати (или на месте):</div>
+            <input type="file" id="kit-corpus-img" accept="image/*" style="background: none; border: 1px dashed var(--neon-blue);">
+        </div>
+    </div>
+
+    <div id="step-kit-screen" class="step hidden">
+        <div class="header-row">
+            <button class="back-btn" onclick="goBack(4)">←</button>
+            <div class="title">Комплект: <span>Экран</span></div>
+        </div>
+        <div class="subtitle">Выберите текстуру и толщину для экрана</div>
+        <div id="kit-screen-texture"></div>
+        <div id="kit-screen-thickness" class="hidden" style="margin-top: 20px;"></div>
     </div>
 
     <!-- Шаг 5: Доп услуги -->
@@ -178,6 +206,13 @@
         </div>
         <div class="subtitle">На какую сумму вы хотите сделать сертификат?</div>
         <input type="number" id="cert-input" placeholder="Введите сумму в BYN" oninput="state.certAmount = this.value">
+        
+        <div class="subtitle" style="margin-top:20px;">Когда вы придете для оформления?</div>
+        <input type="date" id="cert-date" onchange="state.certDate = this.value">
+        <input type="time" id="cert-time" onchange="state.certTime = this.value">
+        
+        <div class="subtitle" style="margin-top:20px;">Ваш номер телефона для связи:</div>
+        <input type="tel" id="cert-phone" placeholder="+375..." oninput="state.certPhone = this.value">
     </div>
 
     <!-- Нижняя панель -->
@@ -194,23 +229,17 @@
         tg.expand();
         tg.setHeaderColor('#030305');
 
-        // Ограничение выбора прошедшей даты в календаре
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('date-input').min = todayStr;
+        document.getElementById('cert-date').min = todayStr;
 
-        // Базовые цены
+        // Базовые цены (0 = "от", -1 = уточнить)
         const BASE_PRICES = {
             "Телефон": { "Экран": [35, 60], "Корпус": [50, 80], "Комплект": [80, 130], "Торцы": [20, 40], "Линзы/Камера": [20, 20] },
             "Планшет": { "Экран": [75, 100], "Корпус": [80, 110], "Комплект": [150, 190], "Торцы": [20, 40], "Линзы/Камера": [20, 20] },
             "Смарт-часы": { "Экран": [25, 40], "Корпус": [40, 60], "Комплект": [60, 80] },
             "Ноутбук": { "Экран": [85, 120], "Верхняя крышка": [85, 120], "Нижняя крышка": [85, 120], "TouchPad": [40, 40], "Комплект": [280, 340] },
-            "Прочее": { 
-                "Карта": [0, 0], 
-                "Игровая консоль": [0, 0], 
-                "Парогенератор": [0, 0], 
-                "Автомультимедиа": [60, 60], 
-                "Кейс наушников": [45, 70]
-            }
+            "Прочее": { "Карта": [-1, -1], "Игровая консоль": [-1, -1], "Парогенератор": [-1, -1], "Автомультимедиа": [60, 60], "Кейс наушников": [45, 70] }
         };
         
         const ZONES = {
@@ -219,20 +248,14 @@
             "Смарт-часы": ["Экран", "Корпус", "Комплект"],
             "Ноутбук": ["Экран", "Верхняя крышка", "Нижняя крышка", "TouchPad", "Комплект"]
         };
-        
-        const OTHER_SERVICES = [
-            { name: "Карта", price: "уточнить" },
-            { name: "Игровая консоль", price: "уточнить" },
-            { name: "Парогенератор", price: "уточнить" },
-            { name: "Автомультимедиа", price: "от 60" },
-            { name: "Кейс наушников", price: "45/70" }
-        ];
 
         let state = {
             step: 1, device: null, model: null, zone: null, film: null, thickness: null, texture: null, phone: null,
             date: null, time: null, point: null,
-            basePrice: 0, addons: [], totalPrice: 0, certAmount: 0,
-            needPhoto: false
+            basePrice: 0, addons: [], totalPrice: 0, 
+            certAmount: 0, certDate: null, certTime: null, certPhone: null,
+            needPhoto: false, isKit: false,
+            kit: { corpusPrice: 0, screenPrice: 0 }
         };
 
         function showStep(stepId, stepNumber) {
@@ -242,62 +265,99 @@
             const nextBtn = document.getElementById('next-btn');
             nextBtn.innerText = "Далее";
             nextBtn.disabled = false;
-            if (stepId === 'step-film') nextBtn.disabled = true;
+            
+            if (stepId === 'step-film' || stepId === 'step-kit-corpus' || stepId === 'step-kit-screen') nextBtn.disabled = true;
             if (stepId === 'step-addons') nextBtn.innerText = "Продолжить";
             if (stepId === 'step-phone') nextBtn.innerText = "Заказать";
             if (stepId === 'step-cert') nextBtn.innerText = "Оформить";
+            
             updateBottomBar();
         }
 
         function goBack(targetStep) {
             if (targetStep === 1) showStep('step-device', 1);
-            else if (targetStep === 2) showStep('step-model', 2);
+            else if (targetStep === 2) { renderModelStep(); showStep('step-model', 2); }
             else if (targetStep === 3) { renderZones(); showStep('step-zone', 3); }
             else if (targetStep === 4) {
                 if (state.device === 'Прочее') { renderOtherServices(); showStep('step-other-service', 3.5); }
                 else { renderZones(); showStep('step-zone', 3); }
             }
-            else if (targetStep === 5) showStep('step-film', 4);
+            else if (targetStep === 5) { renderFilms(); showStep('step-film', 4); }
             else if (targetStep === 6) { renderAddons(); showStep('step-addons', 5); }
             else if (targetStep === 7) showStep('step-datetime', 6);
         }
 
-        function selectDevice(device) {
+        function selectDevice(device, el) {
+            document.querySelectorAll('#device-grid .card').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+
             state.device = device; 
-            state.model = null; 
-            state.zone = null; 
-            state.totalPrice = 0;
+            state.model = null; state.zone = null; state.film = null; state.thickness = null; state.texture = null;
+            state.totalPrice = 0; state.isKit = false;
 
             if (device === 'Сертификат') {
                 showStep('step-cert', 8);
                 return;
             }
 
-            const modelInput = document.getElementById('model-input');
-            if (device === 'Ноутбук') modelInput.placeholder = "Например, MacBook Air M2";
-            else if (device === 'Планшет') modelInput.placeholder = "Например, iPad Pro 11";
-            else if (device === 'Смарт-часы') modelInput.placeholder = "Например, Apple Watch Ultra";
-            else if (device === 'Телефон') modelInput.placeholder = "Например, iPhone 15 Pro";
-            else modelInput.placeholder = "Например, Nintendo Switch";
-            modelInput.value = "";
+            if (device === 'Прочее') { 
+                document.getElementById('model-title').innerHTML = "Уточнение";
+                document.getElementById('model-subtitle').innerText = "Введите детали";
+                renderOtherServices(); 
+                showStep('step-other-service', 3.5); 
+            } else { 
+                renderModelStep(); 
+                showStep('step-model', 2); 
+            }
+        }
 
-            if (device === 'Прочее') { renderOtherServices(); showStep('step-other-service', 3.5); }
-            else { showStep('step-model', 2); }
+        function renderModelStep() {
+            const input = document.getElementById('model-input');
+            input.value = "";
+            
+            if (state.device === 'Ноутбук') input.placeholder = "Например, MacBook Air M2";
+            else if (state.device === 'Планшет') input.placeholder = "Например, iPad Pro 11";
+            else if (state.device === 'Смарт-часы') input.placeholder = "Например, Apple Watch Ultra";
+            else if (state.device === 'Телефон') input.placeholder = "Например, iPhone 15 Pro";
         }
 
         function renderZones() {
             const list = document.getElementById('zone-list');
             list.innerHTML = '';
+            const warning = document.getElementById('zone-warning');
+            
+            if (state.device === 'Планшет' || state.device === 'Ноутбук') {
+                warning.innerText = "⚠️ Цена варьируется в зависимости от размера (дюймов) устройства.";
+            } else {
+                warning.innerText = "";
+            }
+
             ZONES[state.device].forEach(zone => {
                 const prices = BASE_PRICES[state.device][zone];
                 const div = document.createElement('div');
                 div.className = 'list-item';
-                const priceStr = prices ? `${prices[0]} / ${prices[1]} BYN` : 'уточнить';
+                
+                let priceStr = "";
+                if (prices[0] === -1) priceStr = "уточнить";
+                else if (state.device === 'Планшет' || state.device === 'Ноутбук') priceStr = `от ${prices[0]} / ${prices[1]} BYN`;
+                else priceStr = `${prices[0]} / ${prices[1]} BYN`;
+
                 div.innerHTML = `<span>${zone} <span class="zone-price">${priceStr}</span></span>`;
                 div.onclick = () => {
+                    document.querySelectorAll('#zone-list .list-item').forEach(c => c.classList.remove('active'));
+                    div.classList.add('active');
+                    
                     state.zone = zone;
-                    renderFilms();
-                    showStep('step-film', 4);
+                    
+                    if (state.zone === "Комплект") {
+                        state.isKit = true;
+                        renderKitCorpus();
+                        showStep('step-kit-corpus', 4);
+                    } else {
+                        state.isKit = false;
+                        renderFilms();
+                        showStep('step-film', 4);
+                    }
                 };
                 list.appendChild(div);
             });
@@ -306,14 +366,31 @@
         function renderOtherServices() {
             const list = document.getElementById('other-service-list');
             list.innerHTML = '';
-            OTHER_SERVICES.forEach(srv => {
+            const services = [
+                { name: "Карта", hint: "банковская, ключ, id" },
+                { name: "Игровая консоль", hint: "PlayStation 5, XBOX One" },
+                { name: "Парогенератор", hint: "xros 5, Drag X" },
+                { name: "Автомультимедиа", hint: "модель машины (Geely Coolray, LiXian L7)" },
+                { name: "Кейс наушников", hint: "модель наушников (AirPods 3)" }
+            ];
+
+            services.forEach(srv => {
                 const div = document.createElement('div');
                 div.className = 'list-item';
-                div.innerHTML = `<span>${srv.name} <span class="zone-price">${srv.price} BYN</span></span>`;
+                div.innerHTML = `<span>${srv.name} <span class="zone-price">${srv.hint}</span></span>`;
                 div.onclick = () => {
+                    document.querySelectorAll('#other-service-list .list-item').forEach(c => c.classList.remove('active'));
+                    div.classList.add('active');
+                    
                     state.zone = srv.name;
-                    renderFilms();
-                    showStep('step-film', 4);
+                    
+                    // Просим ввести текст (без выпадающего списка)
+                    document.getElementById('model-title').innerHTML = "Уточнение";
+                    document.getElementById('model-subtitle').innerText = `Введите детали (${srv.hint}):`;
+                    document.getElementById('model-input').placeholder = `Введите ${srv.hint}`;
+                    document.getElementById('model-input').value = "";
+                    
+                    showStep('step-model', 2);
                 };
                 list.appendChild(div);
             });
@@ -324,16 +401,28 @@
             list.innerHTML = '';
             let allowVinyl = true;
             
-            if (["Ноутбук", "Планшет", "Смарт-часы"].includes(state.device)) allowVinyl = true;
-            if (["Экран", "Верхняя крышка", "Нижняя крышка", "TouchPad"].includes(state.zone)) allowVinyl = false;
+            // Для ноутбука винил разрешен на крышках (но только стандартный), на экране - нет
+            if (state.zone === "Экран") allowVinyl = false;
+            // Линзы/камера только полиуретан
+            if (state.zone === "Линзы/Камера") {
+                allowVinyl = false;
+                document.getElementById('film-subtitle').innerText = "Только полиуретан (Глянец)";
+            } else {
+                document.getElementById('film-subtitle').innerText = "Тип материала";
+            }
 
             if (allowVinyl) {
                 let divV = document.createElement('div');
                 divV.className = 'list-item';
                 divV.innerHTML = `<span>Виниловая</span>`;
                 divV.onclick = () => {
+                    document.querySelectorAll('#film-list .list-item').forEach(c => c.classList.remove('active'));
+                    divV.classList.add('active');
+                    
                     state.film = "Виниловая";
-                    checkPhotoRequirement();
+                    state.texture = null; 
+                    document.getElementById('texture-list').classList.add('hidden'); 
+                    
                     renderThickness();
                 };
                 list.appendChild(divV);
@@ -343,8 +432,22 @@
             divP.className = 'list-item';
             divP.innerHTML = `<span>Полиуретановая</span>`;
             divP.onclick = () => {
+                document.querySelectorAll('#film-list .list-item').forEach(c => c.classList.remove('active'));
+                divP.classList.add('active');
+                
                 state.film = "Полиуретановая";
-                renderTextures();
+                
+                document.getElementById('photo-upload-block').classList.add('hidden');
+                document.getElementById('custom-image').value = ""; 
+                state.needPhoto = false;
+                
+                if (state.zone === "Линзы/Камера") {
+                    state.texture = "Глянец";
+                    document.getElementById('texture-list').classList.add('hidden');
+                    renderThickness();
+                } else {
+                    renderTextures();
+                }
             };
             list.appendChild(divP);
 
@@ -364,6 +467,8 @@
                 div.className = 'list-item';
                 div.innerHTML = `<span>${opt}</span>`;
                 div.onclick = () => {
+                    document.querySelectorAll('#texture-container .list-item').forEach(c => c.classList.remove('active'));
+                    div.classList.add('active');
                     state.texture = opt;
                     renderThickness();
                 };
@@ -384,20 +489,46 @@
                 premPrice = BASE_PRICES[state.device][state.zone][1];
             }
 
-            let options = [
-                { name: "Стандартная", price: stdPrice },
-                { name: "Противоударная", price: premPrice }
-            ];
+            // Спец. цена для торцов
+            if (state.zone === "Торцы") premPrice = 40;
+
+            // Для ноутбука винил только стандартный
+            let options = [];
+            if (state.film === "Виниловая" && state.device === "Ноутбук") {
+                options = [{ name: "Стандартная", price: stdPrice }];
+            } else {
+                options = [
+                    { name: "Стандартная", price: stdPrice },
+                    { name: "Противоударная", price: premPrice }
+                ];
+            }
 
             options.forEach(opt => {
                 const div = document.createElement('div');
                 div.className = 'list-item';
                 div.innerHTML = `<span>${opt.name}</span><span class="addon-price">${opt.price > 0 ? opt.price + ' BYN' : 'уточнить'}</span>`;
                 div.onclick = () => {
+                    document.querySelectorAll('#thickness-container .list-item').forEach(c => c.classList.remove('active'));
+                    div.classList.add('active');
+                    
                     state.thickness = opt.name;
                     state.basePrice = opt.price;
                     state.totalPrice = opt.price;
-                    checkPhotoRequirement();
+                    
+                    const photoBlock = document.getElementById('photo-upload-block');
+                    if (state.film === "Виниловая" && state.thickness === "Стандартная") {
+                        photoBlock.innerHTML = '<div class="subtitle">Загрузите картинку для печати (или выберите на месте):</div><input type="file" id="custom-image" accept="image/*" style="background: none; border: 1px dashed var(--neon-blue);">';
+                        photoBlock.classList.remove('hidden');
+                        state.needPhoto = true;
+                    } else if (state.film === "Виниловая" && state.thickness === "Противоударная") {
+                        photoBlock.innerHTML = '<div class="subtitle" style="color:var(--neon-pink)">Картинка выбирается на месте (из наличия)</div>';
+                        photoBlock.classList.remove('hidden');
+                        state.needPhoto = false;
+                    } else {
+                        photoBlock.classList.add('hidden');
+                        state.needPhoto = false;
+                    }
+
                     document.getElementById('next-btn').disabled = false; 
                     updateBottomBar();
                 };
@@ -407,32 +538,147 @@
             document.getElementById('next-btn').disabled = true;
         }
 
-        function checkPhotoRequirement() {
-            const block = document.getElementById('photo-upload-block');
-            if (state.film === "Виниловая" && state.thickness === "Стандартная") {
-                block.classList.remove('hidden');
-                state.needPhoto = true;
-            } else {
-                block.classList.add('hidden');
-                state.needPhoto = false;
-            }
+        // --- Сложная логика для КОМПЛЕКТА ---
+        function renderKitCorpus() {
+            const list = document.getElementById('kit-corpus-film-list');
+            list.innerHTML = '';
+            let divV = document.createElement('div');
+            divV.className = 'list-item'; divV.innerHTML = `<span>Виниловая (Корпус)</span>`;
+            divV.onclick = () => {
+                document.querySelectorAll('#kit-corpus-film-list .list-item').forEach(c => c.classList.remove('active'));
+                divV.classList.add('active');
+                renderKitCorpusThickness("Виниловая");
+            };
+            list.appendChild(divV);
+
+            let divP = document.createElement('div');
+            divP.className = 'list-item'; divP.innerHTML = `<span>Полиуретановая (Корпус)</span>`;
+            divP.onclick = () => {
+                document.querySelectorAll('#kit-corpus-film-list .list-item').forEach(c => c.classList.remove('active'));
+                divP.classList.add('active');
+                renderKitCorpusThickness("Полиуретановая");
+            };
+            list.appendChild(divP);
+            document.getElementById('kit-corpus-thickness').classList.add('hidden');
+            document.getElementById('kit-corpus-photo').classList.add('hidden');
+            document.getElementById('next-btn').disabled = true;
         }
 
+        function renderKitCorpusThickness(filmType) {
+            const container = document.getElementById('kit-corpus-thickness');
+            container.innerHTML = '<div class="subtitle">Толщина корпуса:</div>';
+            let prices = BASE_PRICES[state.device]["Корпус"];
+            
+            // Если ноутбук и винил - только стандарт
+            let options = [];
+            if (filmType === "Виниловая" && state.device === "Ноутбук") {
+                options = [{name: "Стандартная", price: prices[0]}];
+            } else {
+                options = [{name: "Стандартная", price: prices[0]}, {name: "Противоударная", price: prices[1]}];
+            }
+
+            options.forEach(opt => {
+                let div = document.createElement('div');
+                div.className = 'list-item'; 
+                div.innerHTML = `<span>${opt.name}</span><span class="addon-price">${opt.price} BYN</span>`;
+                div.onclick = () => {
+                    document.querySelectorAll('#kit-corpus-thickness .list-item').forEach(c => c.classList.remove('active'));
+                    div.classList.add('active');
+                    state.kit.corpusPrice = opt.price;
+                    showKitPhotoIfNeeded(filmType, opt.name);
+                };
+                container.appendChild(div);
+            });
+            container.classList.remove('hidden');
+        }
+
+        function showKitPhotoIfNeeded(filmType, thickness) {
+            const photoBlock = document.getElementById('kit-corpus-photo');
+            if (filmType === "Виниловая" && thickness === "Стандартная") {
+                photoBlock.innerHTML = '<div class="subtitle">Фото для печати (или на месте):</div><input type="file" id="kit-corpus-img" accept="image/*" style="background: none; border: 1px dashed var(--neon-blue);">';
+                photoBlock.classList.remove('hidden');
+            } else if (filmType === "Виниловая" && thickness === "Противоударная") {
+                photoBlock.innerHTML = '<div class="subtitle" style="color:var(--neon-pink)">Картинка на месте</div>';
+                photoBlock.classList.remove('hidden');
+            } else {
+                photoBlock.classList.add('hidden');
+            }
+            document.getElementById('next-btn').disabled = false;
+        }
+
+        function renderKitScreen() {
+            const container = document.getElementById('kit-screen-texture');
+            container.innerHTML = '<div class="subtitle">Текстура экрана:</div>';
+            let divM = document.createElement('div');
+            divM.className = 'list-item'; divM.innerHTML = `<span>Матовая</span>`;
+            divM.onclick = () => { 
+                document.querySelectorAll('#kit-screen-texture .list-item').forEach(c => c.classList.remove('active'));
+                divM.classList.add('active');
+                state.texture = "Матовая";
+                renderKitScreenThickness(); 
+            };
+            container.appendChild(divM);
+
+            let divG = document.createElement('div');
+            divG.className = 'list-item'; divG.innerHTML = `<span>Глянец</span>`;
+            divG.onclick = () => { 
+                document.querySelectorAll('#kit-screen-texture .list-item').forEach(c => c.classList.remove('active'));
+                divG.classList.add('active');
+                state.texture = "Глянец";
+                renderKitScreenThickness(); 
+            };
+            container.appendChild(divG);
+
+            document.getElementById('kit-screen-thickness').classList.add('hidden');
+            document.getElementById('next-btn').disabled = true;
+        }
+
+        function renderKitScreenThickness() {
+            const container = document.getElementById('kit-screen-thickness');
+            container.innerHTML = '<div class="subtitle">Толщина экрана:</div>';
+            let prices = BASE_PRICES[state.device]["Экран"];
+            
+            let divS = document.createElement('div');
+            divS.className = 'list-item'; divS.innerHTML = `<span>Стандартная</span><span class="addon-price">${prices[0]} BYN</span>`;
+            divS.onclick = () => {
+                document.querySelectorAll('#kit-screen-thickness .list-item').forEach(c => c.classList.remove('active'));
+                divS.classList.add('active');
+                state.kit.screenPrice = prices[0];
+                document.getElementById('next-btn').disabled = false;
+            };
+            container.appendChild(divS);
+
+            let divP = document.createElement('div');
+            divP.className = 'list-item'; divP.innerHTML = `<span>Противоударная</span><span class="addon-price">${prices[1]} BYN</span>`;
+            divP.onclick = () => {
+                document.querySelectorAll('#kit-screen-thickness .list-item').forEach(c => c.classList.remove('active'));
+                divP.classList.add('active');
+                state.kit.screenPrice = prices[1];
+                document.getElementById('next-btn').disabled = false;
+            };
+            container.appendChild(divP);
+            container.classList.remove('hidden');
+        }
+
+        // --- Допы ---
         function renderAddons() {
             const list = document.getElementById('addons-list');
             list.innerHTML = '';
             state.addons = []; 
-            state.totalPrice = state.basePrice; 
+            
+            if (state.isKit) {
+                state.totalPrice = state.kit.corpusPrice + state.kit.screenPrice;
+            } else {
+                state.totalPrice = state.basePrice; 
+            }
             
             let availableAddons = [];
             
-            if (["Телефон", "Планшет"].includes(state.device)) {
+            if (state.device === "Телефон" || state.device === "Планшет") {
                 if (state.zone !== "Торцы") availableAddons.push({ name: "Оклейка торцов", price: 20 });
                 if (state.zone !== "Линзы/Камера") availableAddons.push({ name: "Оклейка линз/камеры", price: 20 });
-            }
-            
-            if (state.device === "Ноутбук") {
-                availableAddons = []; 
+                // Чистка динамиков для ТЕЛЕФОНА и ПЛАНШЕТА
+                availableAddons.push({ name: "Чистка динамиков", price: 15 });
             }
 
             if (availableAddons.length === 0) {
@@ -462,27 +708,26 @@
 
         function nextStep() {
             if (state.step === 2) { 
-                if (!state.model) return tg.showAlert("Введите модель устройства");
+                if (!state.model) return tg.showAlert("Введите модель/уточнение");
                 if (state.device === 'Прочее') { renderFilms(); showStep('step-film', 4); }
                 else { renderZones(); showStep('step-zone', 3); }
             }
             else if (state.step === 4) { 
-                if (!state.thickness) return tg.showAlert("Выберите толщину пленки");
+                if (!state.thickness) return tg.showAlert("Выберите толщину");
+                renderAddons(); showStep('step-addons', 5);
+            }
+            else if (state.step === 4.5) { // Корпус комплекта
+                renderKitScreen();
+                showStep('step-kit-screen', 4.6);
+            }
+            else if (state.step === 4.6) { // Экран комплекта
                 renderAddons(); showStep('step-addons', 5);
             }
             else if (state.step === 5) { showStep('step-datetime', 6); }
             else if (state.step === 6) { 
                 if (!state.date || !state.time || !state.point) return tg.showAlert("Выберите дату, время и точку");
-                
-                // Проверка на прошедшее время
                 const selectedDateTime = new Date(state.date + 'T' + state.time);
-                const now = new Date();
-                const diffMinutes = (selectedDateTime - now) / (1000 * 60);
-                
-                if (diffMinutes < 5) {
-                    return tg.showAlert("❌ Выбранное время уже прошло или слишком близко. Пожалуйста, выберите время не менее чем через 10-15 минут.");
-                }
-                
+                if ((selectedDateTime - new Date()) / (1000 * 60) < 5) return tg.showAlert("❌ Время уже прошло");
                 showStep('step-phone', 7);
             }
             else if (state.step === 7) { 
@@ -490,7 +735,9 @@
                 submitOrder();
             }
             else if (state.step === 8) { 
-                if (!state.certAmount || state.certAmount <= 0) return tg.showAlert("Введите сумму сертификата");
+                if (!state.certAmount || state.certAmount <= 0) return tg.showAlert("Введите сумму");
+                if (!state.certDate || !state.certTime) return tg.showAlert("Выберите дату и время визита");
+                if (!state.certPhone) return tg.showAlert("Введите ваш номер телефона");
                 submitOrder();
             }
         }
@@ -504,34 +751,34 @@
                 device: state.device,
                 model: state.model || "Не указана",
                 zone: state.zone,
-                film: state.film || "Не требуется",
+                film: state.film || (state.isKit ? "Комплект" : "Не требуется"),
                 thickness: state.thickness || "-",
                 texture: state.texture || "-",
                 addons: state.addons.map(a => a.name).join(", ") || "Нет",
-                date: state.date,
-                time: state.time,
-                point: state.point,
+                date: state.date || state.certDate,
+                time: state.time || state.certTime,
+                point: state.point || "Сертификат (не требует точки)",
                 price: state.totalPrice,
-                phone: state.phone || "Не указан",
+                phone: state.phone || state.certPhone,
                 is_cert: state.device === 'Сертификат' ? 1 : 0,
                 cert_amount: state.certAmount || 0
             };
-            
-            const fileInput = document.getElementById('custom-image');
-            if (state.needPhoto && fileInput.files.length > 0) {
-                const file = fileInput.files[0];
+
+            let fileInput = document.getElementById('custom-image');
+            if (state.isKit && document.getElementById('kit-corpus-img') && document.getElementById('kit-corpus-img').files.length > 0) {
+                fileInput = document.getElementById('kit-corpus-img');
+            }
+
+            if (fileInput && fileInput.files.length > 0) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                    data.photo_base64 = e.target.result; 
+                    data.photo_base64 = e.target.result;
                     tg.sendData(JSON.stringify(data));
                     tg.close();
                 };
-                reader.readAsDataURL(file);
-            } else if (state.needPhoto && fileInput.files.length === 0) {
-                data.photo_base64 = null;
-                tg.sendData(JSON.stringify(data));
-                tg.close();
+                reader.readAsDataURL(fileInput.files[0]);
             } else {
+                data.photo_base64 = null;
                 tg.sendData(JSON.stringify(data));
                 tg.close();
             }
