@@ -128,7 +128,6 @@
             <div id="thickness-container"></div>
         </div>
         
-        <!-- Блок с текстом про картинку вместо загрузки файла -->
         <div id="photo-upload-block" class="hidden" style="margin-top: 20px;">
             <div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (из наличия)</div>
         </div>
@@ -582,22 +581,19 @@
                     state.totalPrice = state.kit.corpusPrice + state.kit.screenPrice;
                     updateBottomBar(); 
                     
-                    showKitPhotoIfNeeded(filmType, opt.name);
+                    // Показ текста про картинку и ВКЛЮЧЕНИЕ кнопки
+                    const photoBlock = document.getElementById('kit-corpus-photo');
+                    if (filmType === "Виниловая") {
+                        photoBlock.classList.remove('hidden');
+                    } else {
+                        photoBlock.classList.add('hidden');
+                    }
+                    document.getElementById('next-btn').disabled = false;
                 };
                 container.appendChild(div);
             });
             container.classList.remove('hidden');
             document.getElementById('next-btn').disabled = true;
-        }
-
-        function showKitPhotoIfNeeded(filmType, thickness) {
-            const photoBlock = document.getElementById('kit-corpus-photo');
-            if (filmType === "Виниловая") {
-                photoBlock.classList.remove('hidden');
-            } else {
-                photoBlock.classList.add('hidden');
-            }
-            document.getElementById('next-btn').disabled = false;
         }
 
         function renderKitScreen() {
@@ -717,7 +713,7 @@
                 else { renderZones(); showStep('step-zone', 3); }
             }
             else if (state.step === 4) { 
-                if (!state.thickness) return; // Без плашки
+                if (!state.thickness) return; 
                 renderAddons(); showStep('step-addons', 5);
             }
             else if (state.step === 4.5) {
@@ -768,7 +764,7 @@
                 phone: state.phone || state.certPhone,
                 is_cert: state.device === 'Сертификат' ? 1 : 0,
                 cert_amount: state.certAmount || 0,
-                photo_base64: null // Больше не передаем файлы, так как их нет
+                photo_base64: null
             };
 
             tg.sendData(JSON.stringify(data));
