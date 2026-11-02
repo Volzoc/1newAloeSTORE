@@ -129,7 +129,7 @@
         </div>
         
         <div id="photo-upload-block" class="hidden" style="margin-top: 20px;">
-            <div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (или предлоите свой вариант)</div>
+            <div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (из наличия или Ваш вариант)</div>
         </div>
     </div>
 
@@ -139,11 +139,11 @@
             <button class="back-btn" onclick="goBack(4)">←</button>
             <div class="title">Комплект: <span>Корпус</span></div>
         </div>
-        <div class="subtitle">Выберите пленку и толщину для корпуса</div>
+        <div class="subtitle">Выберите плёнку и толщину для корпуса</div>
         <div id="kit-corpus-film-list"></div>
         <div id="kit-corpus-thickness" class="hidden" style="margin-top: 20px;"></div>
         <div id="kit-corpus-photo" class="hidden" style="margin-top: 20px;">
-            <div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (или предлоите свой вариант)</div>
+            <div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (из наличия или Ваш вариант)</div>
         </div>
     </div>
 
@@ -204,7 +204,7 @@
             <div class="title">Сумма <span>сертификата</span></div>
         </div>
         <div class="subtitle">На какую сумму вы хотите сделать сертификат?</div>
-        <input type="number" id="cert-input" placeholder="Введите сумму в BYN" oninput="state.certAmount = this.value">
+        <input type="number" id="cert-input" placeholder="Введите сумму в BYN" oninput="state.certAmount = this.value; recalculateTotal()">
         
         <div class="subtitle" style="margin-top:20px;">Когда вы придете для оформления?</div>
         <input type="date" id="cert-date" onchange="state.certDate = this.value">
@@ -224,11 +224,26 @@
     </div>
 
     <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand();
-        tg.setHeaderColor('#030305');
+        // При обычном открытии HTML Telegram SDK может быть недоступен.
+        const tg = window.Telegram?.WebApp || null;
+        try {
+            tg?.ready();
+            tg?.expand();
+            tg?.setHeaderColor('#030305');
+        } catch (error) {
+            console.warn('Telegram WebApp:', error);
+        }
 
-        const todayStr = new Date().toISOString().split('T')[0];
+        function notify(message) {
+            try {
+                if (tg?.showAlert && tg.initData) return tg.showAlert(message);
+            } catch (error) { console.warn(error); }
+            window.alert(message);
+        }
+
+        // Локальная дата, а не UTC (важно около полуночи).
+        const now = new Date();
+        const todayStr = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
         document.getElementById('date-input').min = todayStr;
         document.getElementById('cert-date').min = todayStr;
 
@@ -253,57 +268,97 @@
             basePrice: 0, addons: [], totalPrice: 0, 
             certAmount: 0, certDate: null, certTime: null, certPhone: null,
             isKit: false,
-            kit: { corpusPrice: 0, screenPrice: 0 }
+            kit: { corpusFilm: null, corpusThickness: null, corpusPrice: 0, screenTexture: null, screenThickness: null, screenPrice: 0 }
         };
 
-        function showStep(stepId, stepNumber) {
-            document.querySelectorAll('.step').forEach(el => el.classList.add('hidden'));
-            document.getElementById(stepId).classList.remove('hidden');
-            state.step = stepNumber; 
-            const nextBtn = document.getElementById('next-btn');
-            nextBtn.innerText = "Далее";
-            nextBtn.disabled = false;
-            
-            if (stepId === 'step-film' || stepId === 'step-kit-corpus' || stepId === 'step-kit-screen') nextBtn.disabled = true;
-            if (stepId === 'step-addons') nextBtn.innerText = "Продолжить";
-            if (stepId === 'step-phone') nextBtn.innerText = "Заказать";
-            if (stepId === 'step-cert') nextBtn.innerText = "Оформить";
-            
+        function emptyKit() {
+            return { corpusFilm: null, corpusThickness: null, corpusPrice: 0, screenTexture: null, screenThickness: null, screenPrice: 0 };
+        }
+
+        function calculateKitPrice() {
+            const k = state.kit;
+            if (!k.corpusThickness || !k.screenThickness) return k.corpusPrice + k.screenPrice;
+            // Два одинаковых типа толщины оплачиваются по тарифам «Комплект» из прайса.
+            // Смешанный вариант — среднее между базовым и противоударным комплектом.
+            const prices = BASE_PRICES[state.device]['Комплект'];
+            const premiumSelections = Number(k.corpusThickness === 'Противоударная') + Number(k.screenThickness === 'Противоударная');
+            return Math.round(prices[0] + (prices[1] - prices[0]) * premiumSelections / 2);
+        }
+
+        function recalculateTotal() {
+            const basic = state.device === 'Сертификат'
+                ? Math.max(0, Number(state.certAmount) || 0)
+                : state.isKit ? calculateKitPrice() : state.basePrice;
+            state.totalPrice = basic + (state.device === 'Сертификат' ? 0 : state.addons.reduce((sum, item) => sum + item.price, 0));
             updateBottomBar();
         }
 
+        function showStep(stepId, stepNumber) {
+            document.querySelectorAll('.step').forEach(el => el.classList.add('hidden'));
+            const current = document.getElementById(stepId);
+            if (!current) throw new Error('Неизвестный этап: ' + stepId);
+            current.classList.remove('hidden');
+            state.step = stepNumber;
+            const nextBtn = document.getElementById('next-btn');
+            nextBtn.textContent = stepId === 'step-addons' ? 'Продолжить'
+                : stepId === 'step-phone' ? 'Заказать'
+                : stepId === 'step-cert' ? 'Оформить' : 'Далее';
+            nextBtn.disabled = stepId === 'step-film' ? !state.thickness
+                : stepId === 'step-kit-corpus' ? !state.kit.corpusThickness
+                : stepId === 'step-kit-screen' ? !state.kit.screenThickness
+                : false;
+            recalculateTotal();
+        }
+
         function goBack(targetStep) {
-            if (targetStep === 1) showStep('step-device', 1);
-            else if (targetStep === 2) { renderModelStep(); showStep('step-model', 2); }
-            else if (targetStep === 3) { renderZones(); showStep('step-zone', 3); }
-            else if (targetStep === 4) {
-                if (state.device === 'Прочее') { renderOtherServices(); showStep('step-other-service', 3.5); }
-                else { renderZones(); showStep('step-zone', 3); }
-            }
-            else if (targetStep === 5) { renderFilms(); showStep('step-film', 4); }
-            else if (targetStep === 6) { renderAddons(); showStep('step-addons', 5); }
-            else if (targetStep === 7) showStep('step-datetime', 6);
+            if (targetStep === 1) {
+                // «Прочее» сначала возвращается к списку услуг, а не к устройствам.
+                if (state.device === 'Прочее' && state.step === 2) {
+                    renderOtherServices();
+                    showStep('step-other-service', 3.5);
+                } else showStep('step-device', 1);
+            } else if (targetStep === 2) {
+                renderModelStep();
+                showStep('step-model', 2);
+            } else if (targetStep === 3) {
+                renderZones();
+                showStep('step-zone', 3);
+            } else if (targetStep === 4) {
+                if (state.step === 4.6 && state.isKit) {
+                    showStep('step-kit-corpus', 4.5);
+                } else if (state.device === 'Прочее') {
+                    renderOtherServices();
+                    showStep('step-other-service', 3.5);
+                } else {
+                    renderZones();
+                    showStep('step-zone', 3);
+                }
+            } else if (targetStep === 5) {
+                // Не перерисовываем выбор: он должен сохраниться при возврате.
+                if (state.isKit) showStep('step-kit-screen', 4.6);
+                else showStep('step-film', 4);
+            } else if (targetStep === 6) {
+                renderAddons();
+                showStep('step-addons', 5);
+            } else if (targetStep === 7) showStep('step-datetime', 6);
         }
 
         function selectDevice(device, el) {
             document.querySelectorAll('#device-grid .card').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
+            state.device = device;
+            state.model = null; state.zone = null; state.film = null;
+            state.thickness = null; state.texture = null; state.basePrice = 0;
+            state.addons = []; state.isKit = false; state.kit = emptyKit();
+            recalculateTotal();
 
-            state.device = device; 
-            state.model = null; state.zone = null; state.film = null; state.thickness = null; state.texture = null;
-            state.totalPrice = 0; state.isKit = false;
-
-            if (device === 'Сертификат') {
-                showStep('step-cert', 8);
-                return;
-            }
-
-            if (device === 'Прочее') { 
-                renderOtherServices(); 
-                showStep('step-other-service', 3.5); 
-            } else { 
-                renderModelStep(); 
-                showStep('step-model', 2); 
+            if (device === 'Сертификат') return showStep('step-cert', 8);
+            if (device === 'Прочее') {
+                renderOtherServices();
+                showStep('step-other-service', 3.5);
+            } else {
+                renderModelStep();
+                showStep('step-model', 2);
             }
         }
 
@@ -312,7 +367,7 @@
             document.getElementById('model-title').innerHTML = "Ваша <span>модель</span>";
             document.getElementById('model-subtitle').innerText = "Введите модель для расчета";
             
-            input.value = "";
+            input.value = state.model || "";
             
             if (state.device === 'Ноутбук') input.placeholder = "Например, MacBook Air M2";
             else if (state.device === 'Планшет') input.placeholder = "Например, iPad Pro 11";
@@ -347,11 +402,14 @@
                     div.classList.add('active');
                     
                     state.zone = zone;
-                    
+                    state.film = null; state.texture = null; state.thickness = null;
+                    state.basePrice = 0; state.addons = []; state.kit = emptyKit();
+                    recalculateTotal();
+
                     if (state.zone === "Комплект") {
                         state.isKit = true;
                         renderKitCorpus();
-                        showStep('step-kit-corpus', 4);
+                        showStep('step-kit-corpus', 4.5);
                     } else {
                         state.isKit = false;
                         renderFilms();
@@ -382,7 +440,11 @@
                     div.classList.add('active');
                     
                     state.zone = srvName;
-                    
+                    state.model = null; state.film = null; state.thickness = null;
+                    state.texture = null; state.basePrice = 0; state.addons = [];
+                    state.isKit = false; state.kit = emptyKit();
+                    recalculateTotal();
+
                     const titleEl = document.getElementById('model-title');
                     const subtitleEl = document.getElementById('model-subtitle');
                     const inputEl = document.getElementById('model-input');
@@ -426,6 +488,8 @@
                     divV.classList.add('active');
                     
                     state.film = "Виниловая";
+                    state.thickness = null; state.basePrice = 0;
+                    recalculateTotal();
                     state.texture = null; 
                     document.getElementById('texture-list').classList.add('hidden'); 
                     
@@ -442,7 +506,9 @@
                 divP.classList.add('active');
                 
                 state.film = "Полиуретановая";
-                
+                state.thickness = null; state.texture = null; state.basePrice = 0;
+                recalculateTotal();
+
                 document.getElementById('photo-upload-block').classList.add('hidden');
                 if (state.zone === "Линзы/Камера") {
                     state.texture = "Глянец";
@@ -473,6 +539,8 @@
                     document.querySelectorAll('#texture-container .list-item').forEach(c => c.classList.remove('active'));
                     div.classList.add('active');
                     state.texture = opt;
+                    state.thickness = null; state.basePrice = 0;
+                    recalculateTotal();
                     renderThickness();
                 };
                 container.appendChild(div);
@@ -483,6 +551,9 @@
         }
 
         function renderThickness() {
+            state.thickness = null;
+            state.basePrice = 0;
+            recalculateTotal();
             const container = document.getElementById('thickness-container');
             container.innerHTML = '';
             
@@ -514,8 +585,8 @@
                     
                     state.thickness = opt.name;
                     state.basePrice = opt.price;
-                    state.totalPrice = opt.price;
-                    
+                    recalculateTotal();
+
                     const photoBlock = document.getElementById('photo-upload-block');
                     if (state.film === "Виниловая") {
                         photoBlock.classList.remove('hidden');
@@ -535,23 +606,18 @@
         function renderKitCorpus() {
             const list = document.getElementById('kit-corpus-film-list');
             list.innerHTML = '';
-            let divV = document.createElement('div');
-            divV.className = 'list-item'; divV.innerHTML = `<span>Виниловая (Корпус)</span>`;
-            divV.onclick = () => {
-                document.querySelectorAll('#kit-corpus-film-list .list-item').forEach(c => c.classList.remove('active'));
-                divV.classList.add('active');
-                renderKitCorpusThickness("Виниловая");
-            };
-            list.appendChild(divV);
-
-            let divP = document.createElement('div');
-            divP.className = 'list-item'; divP.innerHTML = `<span>Полиуретановая (Корпус)</span>`;
-            divP.onclick = () => {
-                document.querySelectorAll('#kit-corpus-film-list .list-item').forEach(c => c.classList.remove('active'));
-                divP.classList.add('active');
-                renderKitCorpusThickness("Полиуретановая");
-            };
-            list.appendChild(divP);
+            const choices = ['Виниловая', 'Полиуретановая'];
+            choices.forEach(filmType => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.textContent = filmType + ' (Корпус)';
+                div.onclick = () => {
+                    list.querySelectorAll('.list-item').forEach(c => c.classList.remove('active'));
+                    div.classList.add('active');
+                    renderKitCorpusThickness(filmType);
+                };
+                list.appendChild(div);
+            });
             document.getElementById('kit-corpus-thickness').classList.add('hidden');
             document.getElementById('kit-corpus-photo').classList.add('hidden');
             document.getElementById('next-btn').disabled = true;
@@ -559,39 +625,36 @@
 
         function renderKitCorpusThickness(filmType) {
             const container = document.getElementById('kit-corpus-thickness');
+            state.kit.corpusFilm = filmType;
+            state.kit.corpusThickness = null;
+            state.kit.corpusPrice = 0;
+            recalculateTotal();
             container.innerHTML = '<div class="subtitle">Толщина корпуса:</div>';
-            let prices = BASE_PRICES[state.device]["Корпус"];
-            
-            let options = [];
-            if (filmType === "Виниловая" && state.device === "Ноутбук") {
-                options = [{name: "Стандартная", price: prices[0]}];
-            } else {
-                options = [{name: "Стандартная", price: prices[0]}, {name: "Противоударная", price: prices[1]}];
-            }
 
+            // У ноутбука «Корпус» не является отдельной позицией прайса:
+            // для комплекта это две крышки (верхняя и нижняя).
+            const prices = state.device === 'Ноутбук'
+                ? [0, 1].map(i => BASE_PRICES['Ноутбук']['Верхняя крышка'][i] + BASE_PRICES['Ноутбук']['Нижняя крышка'][i])
+                : BASE_PRICES[state.device]['Корпус'];
+            const options = filmType === 'Виниловая' && state.device === 'Ноутбук'
+                ? [{ name: 'Стандартная', price: prices[0] }]
+                : [{ name: 'Стандартная', price: prices[0] }, { name: 'Противоударная', price: prices[1] }];
             options.forEach(opt => {
-                let div = document.createElement('div');
-                div.className = 'list-item'; 
+                const div = document.createElement('div');
+                div.className = 'list-item';
                 div.innerHTML = `<span>${opt.name}</span><span class="addon-price">${opt.price} BYN</span>`;
                 div.onclick = () => {
-                    document.querySelectorAll('#kit-corpus-thickness .list-item').forEach(c => c.classList.remove('active'));
+                    container.querySelectorAll('.list-item').forEach(c => c.classList.remove('active'));
                     div.classList.add('active');
-                    
+                    state.kit.corpusThickness = opt.name;
                     state.kit.corpusPrice = opt.price;
-                    state.totalPrice = state.kit.corpusPrice + state.kit.screenPrice;
-                    updateBottomBar(); 
-                    
-                    // Показ текста про картинку и ВКЛЮЧЕНИЕ кнопки
-                    const photoBlock = document.getElementById('kit-corpus-photo');
-                    if (filmType === "Виниловая") {
-                        photoBlock.classList.remove('hidden');
-                    } else {
-                        photoBlock.classList.add('hidden');
-                    }
+                    document.getElementById('kit-corpus-photo').classList.toggle('hidden', filmType !== 'Виниловая');
                     document.getElementById('next-btn').disabled = false;
+                    recalculateTotal();
                 };
                 container.appendChild(div);
             });
+            document.getElementById('kit-corpus-photo').classList.add('hidden');
             container.classList.remove('hidden');
             document.getElementById('next-btn').disabled = true;
         }
@@ -599,26 +662,22 @@
         function renderKitScreen() {
             const container = document.getElementById('kit-screen-texture');
             container.innerHTML = '<div class="subtitle">Текстура экрана:</div>';
-            let divM = document.createElement('div');
-            divM.className = 'list-item'; divM.innerHTML = `<span>Матовая</span>`;
-            divM.onclick = () => { 
-                document.querySelectorAll('#kit-screen-texture .list-item').forEach(c => c.classList.remove('active'));
-                divM.classList.add('active');
-                state.texture = "Матовая";
-                renderKitScreenThickness(); 
-            };
-            container.appendChild(divM);
-
-            let divG = document.createElement('div');
-            divG.className = 'list-item'; divG.innerHTML = `<span>Глянец</span>`;
-            divG.onclick = () => { 
-                document.querySelectorAll('#kit-screen-texture .list-item').forEach(c => c.classList.remove('active'));
-                divG.classList.add('active');
-                state.texture = "Глянец";
-                renderKitScreenThickness(); 
-            };
-            container.appendChild(divG);
-
+            ['Матовая', 'Глянец'].forEach(opt => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.textContent = opt;
+                div.onclick = () => {
+                    container.querySelectorAll('.list-item').forEach(c => c.classList.remove('active'));
+                    div.classList.add('active');
+                    state.kit.screenTexture = opt;
+                    state.texture = opt;
+                    state.kit.screenThickness = null;
+                    state.kit.screenPrice = 0;
+                    renderKitScreenThickness();
+                    recalculateTotal();
+                };
+                container.appendChild(div);
+            });
             document.getElementById('kit-screen-thickness').classList.add('hidden');
             document.getElementById('next-btn').disabled = true;
         }
@@ -626,120 +685,110 @@
         function renderKitScreenThickness() {
             const container = document.getElementById('kit-screen-thickness');
             container.innerHTML = '<div class="subtitle">Толщина экрана:</div>';
-            let prices = BASE_PRICES[state.device]["Экран"];
-            
-            let divS = document.createElement('div');
-            divS.className = 'list-item'; divS.innerHTML = `<span>Стандартная</span><span class="addon-price">${prices[0]} BYN</span>`;
-            divS.onclick = () => {
-                document.querySelectorAll('#kit-screen-thickness .list-item').forEach(c => c.classList.remove('active'));
-                divS.classList.add('active');
-                
-                state.kit.screenPrice = prices[0];
-                state.totalPrice = state.kit.corpusPrice + state.kit.screenPrice;
-                updateBottomBar();
-                
-                document.getElementById('next-btn').disabled = false;
-            };
-            container.appendChild(divS);
-
-            let divP = document.createElement('div');
-            divP.className = 'list-item'; divP.innerHTML = `<span>Противоударная</span><span class="addon-price">${prices[1]} BYN</span>`;
-            divP.onclick = () => {
-                document.querySelectorAll('#kit-screen-thickness .list-item').forEach(c => c.classList.remove('active'));
-                divP.classList.add('active');
-                
-                state.kit.screenPrice = prices[1];
-                state.totalPrice = state.kit.corpusPrice + state.kit.screenPrice;
-                updateBottomBar();
-                
-                document.getElementById('next-btn').disabled = false;
-            };
-            container.appendChild(divP);
+            const prices = BASE_PRICES[state.device]['Экран'];
+            [{name: 'Стандартная', price: prices[0]}, {name: 'Противоударная', price: prices[1]}].forEach(opt => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `<span>${opt.name}</span><span class="addon-price">${opt.price} BYN</span>`;
+                div.onclick = () => {
+                    container.querySelectorAll('.list-item').forEach(c => c.classList.remove('active'));
+                    div.classList.add('active');
+                    state.kit.screenThickness = opt.name;
+                    state.kit.screenPrice = opt.price;
+                    document.getElementById('next-btn').disabled = false;
+                    recalculateTotal();
+                };
+                container.appendChild(div);
+            });
             container.classList.remove('hidden');
+            document.getElementById('next-btn').disabled = true;
         }
 
         function renderAddons() {
             const list = document.getElementById('addons-list');
             list.innerHTML = '';
-            state.addons = []; 
-            
-            if (state.isKit) {
-                state.totalPrice = state.kit.corpusPrice + state.kit.screenPrice;
-            } else {
-                state.totalPrice = state.basePrice; 
-            }
-            
+            // Возврат с выбора даты не должен стирать ранее выбранные допуслуги.
+            const selected = new Set(state.addons.map(addon => addon.name));
             let availableAddons = [];
-            
-            if (state.device === "Телефон" || state.device === "Планшет") {
-                if (state.zone !== "Торцы" && state.zone !== "Корпус" && state.zone !== "Комплект") {
-                    availableAddons.push({ name: "Оклейка торцов", price: 20 });
+            if (state.device === 'Телефон' || state.device === 'Планшет') {
+                if (!['Торцы', 'Корпус', 'Комплект'].includes(state.zone)) {
+                    availableAddons.push({ name: 'Оклейка торцов', price: 20 });
                 }
-                if (state.zone !== "Линзы/Камера") {
-                    availableAddons.push({ name: "Оклейка линз/камеры", price: 20 });
+                if (state.zone !== 'Линзы/Камера') {
+                    availableAddons.push({ name: 'Оклейка линз/камеры', price: 20 });
                 }
-                availableAddons.push({ name: "Чистка динамиков", price: 15 });
+                availableAddons.push({ name: 'Чистка динамиков', price: 15 });
             }
-
+            state.addons = availableAddons.filter(addon => selected.has(addon.name));
             if (availableAddons.length === 0) {
                 list.innerHTML = '<div class="subtitle" style="text-align:center; padding: 20px 0;">Для этой услуги доп. опции не требуются.</div>';
             } else {
                 availableAddons.forEach(addon => {
                     const div = document.createElement('div');
                     div.className = 'list-item';
+                    if (selected.has(addon.name)) div.classList.add('active');
                     div.innerHTML = `<span>${addon.name}</span><span class="addon-price">+${addon.price} BYN</span>`;
                     div.onclick = () => {
                         div.classList.toggle('active');
-                        const idx = state.addons.findIndex(a => a.name === addon.name);
-                        if (idx > -1) {
-                            state.totalPrice -= addon.price;
-                            state.addons.splice(idx, 1);
-                        } else {
-                            state.totalPrice += addon.price;
-                            state.addons.push(addon);
-                        }
-                        updateBottomBar();
+                        state.addons = div.classList.contains('active')
+                            ? [...state.addons, addon]
+                            : state.addons.filter(item => item.name !== addon.name);
+                        recalculateTotal();
                     };
                     list.appendChild(div);
                 });
             }
-            updateBottomBar();
+            recalculateTotal();
         }
 
         function nextStep() {
-            if (state.step === 2) { 
-                if (!state.model) return tg.showAlert("Введите модель/уточнение");
+            if (state.step === 2) {
+                state.model = (document.getElementById('model-input').value || '').trim();
+                if (!state.model) return notify('Введите модель/уточнение');
                 if (state.device === 'Прочее') { renderFilms(); showStep('step-film', 4); }
                 else { renderZones(); showStep('step-zone', 3); }
-            }
-            else if (state.step === 4) { 
-                if (!state.thickness) return; 
-                renderAddons(); showStep('step-addons', 5);
-            }
-            else if (state.step === 4.5) {
-                if (!state.kit.corpusPrice) return;
-                renderKitScreen();
+            } else if (state.step === 4) {
+                if (!state.thickness) return notify('Выберите материал и толщину');
+                renderAddons();
+                showStep('step-addons', 5);
+            } else if (state.step === 4.5) {
+                if (!state.kit.corpusThickness) return notify('Выберите плёнку и толщину для корпуса');
+                // Экран перерисовываем только при первом посещении, иначе сохраняем выбор.
+                if (!state.kit.screenTexture) renderKitScreen();
                 showStep('step-kit-screen', 4.6);
-            }
-            else if (state.step === 4.6) {
-                if (!state.kit.screenPrice) return;
-                renderAddons(); showStep('step-addons', 5);
-            }
-            else if (state.step === 5) { showStep('step-datetime', 6); }
-            else if (state.step === 6) { 
-                if (!state.date || !state.time || !state.point) return tg.showAlert("Выберите дату, время и точку");
+            } else if (state.step === 4.6) {
+                if (!state.kit.screenThickness) return notify('Выберите текстуру и толщину для экрана');
+                renderAddons();
+                showStep('step-addons', 5);
+            } else if (state.step === 5) {
+                showStep('step-datetime', 6);
+            } else if (state.step === 6) {
+                state.date = document.getElementById('date-input').value;
+                state.time = document.getElementById('time-input').value;
+                state.point = document.getElementById('point-input').value;
+                if (!state.date || !state.time || !state.point) return notify('Выберите дату, время и точку');
                 const selectedDateTime = new Date(state.date + 'T' + state.time);
-                if ((selectedDateTime - new Date()) / (1000 * 60) < 5) return tg.showAlert("❌ Время уже прошло");
+                if (!Number.isFinite(selectedDateTime.getTime()) || selectedDateTime.getTime() - Date.now() < 5 * 60000)
+                    return notify('❌ Время уже прошло или осталось менее 5 минут');
                 showStep('step-phone', 7);
-            }
-            else if (state.step === 7) { 
-                if (!state.phone) return tg.showAlert("Введите номер телефона");
+            } else if (state.step === 7) {
+                state.phone = document.getElementById('phone-input').value.trim();
+                if (!state.phone || state.phone.replace(/\D/g, '').length < 7)
+                    return notify('Введите корректный номер телефона');
                 submitOrder();
-            }
-            else if (state.step === 8) { 
-                if (!state.certAmount || state.certAmount <= 0) return tg.showAlert("Введите сумму");
-                if (!state.certDate || !state.certTime) return tg.showAlert("Выберите дату и время визита");
-                if (!state.certPhone) return tg.showAlert("Введите ваш номер телефона");
+            } else if (state.step === 8) {
+                state.certAmount = Number(document.getElementById('cert-input').value) || 0;
+                state.certDate = document.getElementById('cert-date').value;
+                state.certTime = document.getElementById('cert-time').value;
+                state.certPhone = document.getElementById('cert-phone').value.trim();
+                recalculateTotal();
+                if (state.certAmount <= 0) return notify('Введите сумму сертификата');
+                if (!state.certDate || !state.certTime) return notify('Выберите дату и время визита');
+                const visitDateTime = new Date(state.certDate + 'T' + state.certTime);
+                if (!Number.isFinite(visitDateTime.getTime()) || visitDateTime.getTime() - Date.now() < 5 * 60000)
+                    return notify('❌ Время уже прошло или осталось менее 5 минут');
+                if (!state.certPhone || state.certPhone.replace(/\D/g, '').length < 7)
+                    return notify('Введите корректный номер телефона');
                 submitOrder();
             }
         }
@@ -749,26 +798,48 @@
         }
 
         function submitOrder() {
+            recalculateTotal();
+            const k = state.kit;
             const data = {
                 device: state.device,
-                model: state.model || "Не указана",
+                model: state.model || 'Не указана',
                 zone: state.zone,
-                film: state.film || (state.isKit ? "Комплект" : "Не требуется"),
-                thickness: state.thickness || "-",
-                texture: state.texture || "-",
-                addons: state.addons.map(a => a.name).join(", ") || "Нет",
-                date: state.date || state.certDate,
-                time: state.time || state.certTime,
-                point: state.point || "Сертификат (не требует точки)",
+                film: state.isKit ? `Корпус: ${k.corpusFilm}; Экран: Полиуретановая` : (state.film || 'Не требуется'),
+                thickness: state.isKit ? `Корпус: ${k.corpusThickness}; Экран: ${k.screenThickness}` : (state.thickness || '-'),
+                texture: state.isKit ? `Экран: ${k.screenTexture}` : (state.texture || '-'),
+                kit: state.isKit ? {
+                    corpus_film: k.corpusFilm,
+                    corpus_thickness: k.corpusThickness,
+                    screen_film: 'Полиуретановая',
+                    screen_texture: k.screenTexture,
+                    screen_thickness: k.screenThickness,
+                    price: calculateKitPrice()
+                } : null,
+                addons: state.addons.map(a => a.name).join(', ') || 'Нет',
+                date: state.device === 'Сертификат' ? state.certDate : state.date,
+                time: state.device === 'Сертификат' ? state.certTime : state.time,
+                point: state.device === 'Сертификат' ? 'Сертификат (не требует точки)' : state.point,
                 price: state.totalPrice,
-                phone: state.phone || state.certPhone,
+                phone: state.device === 'Сертификат' ? state.certPhone : state.phone,
                 is_cert: state.device === 'Сертификат' ? 1 : 0,
-                cert_amount: state.certAmount || 0,
+                cert_amount: state.device === 'Сертификат' ? Number(state.certAmount) : 0,
                 photo_base64: null
             };
-
-            tg.sendData(JSON.stringify(data));
-            tg.close();
+            // Без Telegram бота нельзя считать заказ отправленным.
+            if (!tg || !tg.platform || tg.platform === 'unknown' || typeof tg.sendData !== 'function') {
+                console.info('Предпросмотр заказа:', data);
+                return notify('Заказ заполнен. Для отправки откройте магазин через кнопку в клавиатуре Telegram-бота. В обычном браузере заказ не отправляется.');
+            }
+            if (tg.initDataUnsafe?.query_id || tg.initDataUnsafe?.user) {
+                return notify('Этот способ запуска Telegram не поддерживает отправку через sendData. Откройте магазин кнопкой в клавиатуре бота либо подключите серверный приём заказов.');
+            }
+            try {
+                tg.sendData(JSON.stringify(data));
+                // Telegram сам закрывает мини-приложение после sendData при поддерживаемом способе запуска.
+            } catch (error) {
+                console.error('Ошибка отправки заказа:', error);
+                notify('Не удалось отправить заказ. Попробуйте заново через Telegram-бота.');
+            }
         }
     </script>
 </body>
