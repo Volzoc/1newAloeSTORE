@@ -77,7 +77,7 @@
         </div>
     </div>
 
-    <!-- Шаг 2: Модель / Уточнение -->
+    <!-- Шаг 2: Модель -->
     <div id="step-model" class="step hidden">
         <div class="header-row">
             <button class="back-btn" onclick="goBack(1)">←</button>
@@ -128,9 +128,9 @@
             <div id="thickness-container"></div>
         </div>
         
+        <!-- Блок с текстом про картинку вместо загрузки файла -->
         <div id="photo-upload-block" class="hidden" style="margin-top: 20px;">
-            <div class="subtitle">Загрузите картинку для печати (или выберите на месте):</div>
-            <input type="file" id="custom-image" accept="image/*" style="background: none; border: 1px dashed var(--neon-blue);">
+            <div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (из наличия)</div>
         </div>
     </div>
 
@@ -144,8 +144,7 @@
         <div id="kit-corpus-film-list"></div>
         <div id="kit-corpus-thickness" class="hidden" style="margin-top: 20px;"></div>
         <div id="kit-corpus-photo" class="hidden" style="margin-top: 20px;">
-            <div class="subtitle">Фото для печати (или на месте):</div>
-            <input type="file" id="kit-corpus-img" accept="image/*" style="background: none; border: 1px dashed var(--neon-blue);">
+            <div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (из наличия)</div>
         </div>
     </div>
 
@@ -233,7 +232,6 @@
         document.getElementById('date-input').min = todayStr;
         document.getElementById('cert-date').min = todayStr;
 
-        // Базовые цены (0 = "уточнить")
         const BASE_PRICES = {
             "Телефон": { "Экран": [35, 60], "Корпус": [50, 80], "Комплект": [80, 130], "Торцы": [20, 40], "Линзы/Камера": [20, 20] },
             "Планшет": { "Экран": [75, 100], "Корпус": [80, 110], "Комплект": [150, 190], "Торцы": [20, 40], "Линзы/Камера": [20, 20] },
@@ -254,7 +252,7 @@
             date: null, time: null, point: null,
             basePrice: 0, addons: [], totalPrice: 0, 
             certAmount: 0, certDate: null, certTime: null, certPhone: null,
-            needPhoto: false, isKit: false,
+            isKit: false,
             kit: { corpusPrice: 0, screenPrice: 0 }
         };
 
@@ -446,9 +444,6 @@
                 state.film = "Полиуретановая";
                 
                 document.getElementById('photo-upload-block').classList.add('hidden');
-                document.getElementById('custom-image').value = ""; 
-                state.needPhoto = false;
-                
                 if (state.zone === "Линзы/Камера") {
                     state.texture = "Глянец";
                     document.getElementById('texture-list').classList.add('hidden');
@@ -522,17 +517,15 @@
                     state.totalPrice = opt.price;
                     
                     const photoBlock = document.getElementById('photo-upload-block');
-                    if (state.film === "Виниловая" && state.thickness === "Стандартная") {
-                        photoBlock.innerHTML = '<div class="subtitle">Загрузите картинку для печати (или выберите на месте):</div><input type="file" id="custom-image" accept="image/*" style="background: none; border: 1px dashed var(--neon-blue);">';
+                    if (state.film === "Виниловая") {
+                        if (state.thickness === "Стандартная") {
+                            photoBlock.innerHTML = '<div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (из наличия)</div>';
+                        } else {
+                            photoBlock.innerHTML = '<div class="subtitle" style="color:var(--neon-pink)">Картинка выбирается на месте (из наличия)</div>';
+                        }
                         photoBlock.classList.remove('hidden');
-                        state.needPhoto = true;
-                    } else if (state.film === "Виниловая" && state.thickness === "Противоударная") {
-                        photoBlock.innerHTML = '<div class="subtitle" style="color:var(--neon-pink)">Картинка выбирается на месте (из наличия)</div>';
-                        photoBlock.classList.remove('hidden');
-                        state.needPhoto = false;
                     } else {
                         photoBlock.classList.add('hidden');
-                        state.needPhoto = false;
                     }
 
                     document.getElementById('next-btn').disabled = false; 
@@ -604,7 +597,7 @@
         function showKitPhotoIfNeeded(filmType, thickness) {
             const photoBlock = document.getElementById('kit-corpus-photo');
             if (filmType === "Виниловая" && thickness === "Стандартная") {
-                photoBlock.innerHTML = '<div class="subtitle">Фото для печати (или на месте):</div><input type="file" id="kit-corpus-img" accept="image/*" style="background: none; border: 1px dashed var(--neon-blue);">';
+                photoBlock.innerHTML = '<div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (из наличия)</div>';
                 photoBlock.classList.remove('hidden');
             } else if (filmType === "Виниловая" && thickness === "Противоударная") {
                 photoBlock.innerHTML = '<div class="subtitle" style="color:var(--neon-pink)">Картинка на месте</div>';
@@ -736,11 +729,13 @@
                 renderAddons(); showStep('step-addons', 5);
             }
             else if (state.step === 4.5) {
+                // Переход от корпуса к экрану
                 if (!state.kit.corpusPrice) return;
                 renderKitScreen();
                 showStep('step-kit-screen', 4.6);
             }
             else if (state.step === 4.6) {
+                // Конец настройки комплекта
                 if (!state.kit.screenPrice) return;
                 renderAddons(); showStep('step-addons', 5);
             }
@@ -782,25 +777,12 @@
                 price: state.totalPrice,
                 phone: state.phone || state.certPhone,
                 is_cert: state.device === 'Сертификат' ? 1 : 0,
-                cert_amount: state.certAmount || 0
+                cert_amount: state.certAmount || 0,
+                photo_base64: null // Больше не передаем файлы, так как их нет
             };
 
-            // Проверяем, прикреплено ли фото
-            let fileInput = document.getElementById('custom-image');
-            if (state.isKit && document.getElementById('kit-corpus-img') && document.getElementById('kit-corpus-img').files.length > 0) {
-                fileInput = document.getElementById('kit-corpus-img');
-            }
-
-            // Отправляем данные (без передачи гигабайтов картинок)
-            if (fileInput && fileInput.files.length > 0) {
-                data.photo_base64 = "uploaded"; 
-                tg.sendData(JSON.stringify(data));
-                tg.close();
-            } else {
-                data.photo_base64 = null;
-                tg.sendData(JSON.stringify(data));
-                tg.close();
-            }
+            tg.sendData(JSON.stringify(data));
+            tg.close();
         }
     </script>
 </body>
