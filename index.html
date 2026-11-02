@@ -98,7 +98,7 @@
         <div id="zone-list"></div>
     </div>
 
-    <!-- Шаг 3.5: Прочее (выбор услуги) -->
+    <!-- Шаг 3.5: Прочее -->
     <div id="step-other-service" class="step hidden">
         <div class="header-row">
             <button class="back-btn" onclick="goBack(1)">←</button>
@@ -134,7 +134,7 @@
         </div>
     </div>
 
-    <!-- Шаг 4.5: Логика для Комплекта -->
+    <!-- Шаг 4.5: Комплект -->
     <div id="step-kit-corpus" class="step hidden">
         <div class="header-row">
             <button class="back-btn" onclick="goBack(4)">←</button>
@@ -233,12 +233,13 @@
         document.getElementById('date-input').min = todayStr;
         document.getElementById('cert-date').min = todayStr;
 
+        // Базовые цены (0 = "уточнить")
         const BASE_PRICES = {
             "Телефон": { "Экран": [35, 60], "Корпус": [50, 80], "Комплект": [80, 130], "Торцы": [20, 40], "Линзы/Камера": [20, 20] },
             "Планшет": { "Экран": [75, 100], "Корпус": [80, 110], "Комплект": [150, 190], "Торцы": [20, 40], "Линзы/Камера": [20, 20] },
             "Смарт-часы": { "Экран": [25, 40], "Корпус": [40, 60], "Комплект": [60, 80] },
             "Ноутбук": { "Экран": [85, 120], "Верхняя крышка": [85, 120], "Нижняя крышка": [85, 120], "TouchPad": [40, 40], "Комплект": [280, 340] },
-            "Прочее": { "Карта": [-1, -1], "Игровая консоль": [-1, -1], "Парогенератор": [-1, -1], "Автомультимедиа": [60, 60], "Кейс наушников": [45, 70] }
+            "Прочее": { "Карта": [0, 0], "Игровая консоль": [0, 0], "Парогенератор": [0, 0], "Автомультимедиа": [60, 60], "Кейс наушников": [45, 70] }
         };
         
         const ZONES = {
@@ -338,7 +339,7 @@
                 div.className = 'list-item';
                 
                 let priceStr = "";
-                if (prices[0] === -1) priceStr = "уточнить";
+                if (prices[0] === 0) priceStr = "уточнить";
                 else if (state.device === 'Планшет' || state.device === 'Ноутбук') priceStr = `от ${prices[0]} / ${prices[1]} BYN`;
                 else priceStr = `${prices[0]} / ${prices[1]} BYN`;
 
@@ -367,36 +368,38 @@
             const list = document.getElementById('other-service-list');
             list.innerHTML = '';
             
-            const services = [
-                { name: "Карта", hint: "банковская, ключ, ID" },
-                { name: "Игровая консоль", hint: "PlayStation 5, XBOX One" },
-                { name: "Парогенератор", hint: "xros 5, Drag X" },
-                { name: "Автомультимедиа", hint: "Geely Coolray, LiXian L7" },
-                { name: "Кейс наушников", hint: "AirPods 3" }
-            ];
+            const services = Object.keys(BASE_PRICES["Прочее"]);
 
-            services.forEach(srv => {
+            services.forEach(srvName => {
+                const prices = BASE_PRICES["Прочее"][srvName];
                 const div = document.createElement('div');
                 div.className = 'list-item';
-                div.innerHTML = `<span>${srv.name}</span>`;
+                
+                let priceStr = prices[0] === 0 ? "уточнить" : `${prices[0]} / ${prices[1]} BYN`;
+                
+                div.innerHTML = `<span>${srvName}</span><span class="zone-price">${priceStr}</span>`;
                 
                 div.onclick = () => {
                     document.querySelectorAll('#other-service-list .list-item').forEach(c => c.classList.remove('active'));
                     div.classList.add('active');
                     
-                    state.zone = srv.name;
+                    state.zone = srvName;
                     
-                    if (srv.name === "Карта") {
-                        document.getElementById('model-title').innerHTML = "Уточнение";
-                        document.getElementById('model-subtitle').innerText = "Введите детали";
-                        document.getElementById('model-input').placeholder = "Например: банковская";
+                    const titleEl = document.getElementById('model-title');
+                    const subtitleEl = document.getElementById('model-subtitle');
+                    const inputEl = document.getElementById('model-input');
+                    
+                    if (srvName === "Карта") {
+                        titleEl.innerHTML = "Уточнение";
+                        subtitleEl.innerText = "Введите детали (банковская, ключ, ID)";
+                        inputEl.placeholder = "Например: банковская карта";
                     } else {
-                        document.getElementById('model-title').innerHTML = "Ваша <span>модель</span>";
-                        document.getElementById('model-subtitle').innerText = "Введите модель для расчета";
-                        document.getElementById('model-input').placeholder = "Например, " + srv.hint.split(',')[0];
+                        titleEl.innerHTML = "Ваша <span>модель</span>";
+                        subtitleEl.innerText = "Введите модель для расчета";
+                        inputEl.placeholder = "Например, " + srvName;
                     }
                     
-                    document.getElementById('model-input').value = "";
+                    inputEl.value = "";
                     showStep('step-model', 2);
                 };
                 list.appendChild(div);
@@ -688,17 +691,12 @@
             let availableAddons = [];
             
             if (state.device === "Телефон" || state.device === "Планшет") {
-                // Если НЕ выбраны торцы, корпус или комплект, предлагаем торцы
                 if (state.zone !== "Торцы" && state.zone !== "Корпус" && state.zone !== "Комплект") {
                     availableAddons.push({ name: "Оклейка торцов", price: 20 });
                 }
-                
-                // Линзы предлагаем всегда, если это не сама зона линз
                 if (state.zone !== "Линзы/Камера") {
                     availableAddons.push({ name: "Оклейка линз/камеры", price: 20 });
                 }
-                
-                // Чистку предлагаем всегда
                 availableAddons.push({ name: "Чистка динамиков", price: 15 });
             }
 
@@ -734,14 +732,16 @@
                 else { renderZones(); showStep('step-zone', 3); }
             }
             else if (state.step === 4) { 
-                if (!state.thickness) return tg.showAlert("Выберите толщину");
+                if (!state.thickness) return; // Без плашки
                 renderAddons(); showStep('step-addons', 5);
             }
             else if (state.step === 4.5) {
+                if (!state.kit.corpusPrice) return;
                 renderKitScreen();
                 showStep('step-kit-screen', 4.6);
             }
             else if (state.step === 4.6) {
+                if (!state.kit.screenPrice) return;
                 renderAddons(); showStep('step-addons', 5);
             }
             else if (state.step === 5) { showStep('step-datetime', 6); }
@@ -785,19 +785,17 @@
                 cert_amount: state.certAmount || 0
             };
 
+            // Проверяем, прикреплено ли фото
             let fileInput = document.getElementById('custom-image');
             if (state.isKit && document.getElementById('kit-corpus-img') && document.getElementById('kit-corpus-img').files.length > 0) {
                 fileInput = document.getElementById('kit-corpus-img');
             }
 
+            // Отправляем данные (без передачи гигабайтов картинок)
             if (fileInput && fileInput.files.length > 0) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    data.photo_base64 = e.target.result;
-                    tg.sendData(JSON.stringify(data));
-                    tg.close();
-                };
-                reader.readAsDataURL(fileInput.files[0]);
+                data.photo_base64 = "uploaded"; 
+                tg.sendData(JSON.stringify(data));
+                tg.close();
             } else {
                 data.photo_base64 = null;
                 tg.sendData(JSON.stringify(data));
