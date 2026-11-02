@@ -134,7 +134,7 @@
         </div>
     </div>
 
-    <!-- Шаг 4.5: Комплект -->
+    <!-- Шаг 4.5: Комплект Корпус -->
     <div id="step-kit-corpus" class="step hidden">
         <div class="header-row">
             <button class="back-btn" onclick="goBack(4)">←</button>
@@ -148,6 +148,7 @@
         </div>
     </div>
 
+    <!-- Шаг 4.6: Комплект Экран -->
     <div id="step-kit-screen" class="step hidden">
         <div class="header-row">
             <button class="back-btn" onclick="goBack(4)">←</button>
@@ -518,11 +519,6 @@
                     
                     const photoBlock = document.getElementById('photo-upload-block');
                     if (state.film === "Виниловая") {
-                        if (state.thickness === "Стандартная") {
-                            photoBlock.innerHTML = '<div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (из наличия)</div>';
-                        } else {
-                            photoBlock.innerHTML = '<div class="subtitle" style="color:var(--neon-pink)">Картинка выбирается на месте (из наличия)</div>';
-                        }
                         photoBlock.classList.remove('hidden');
                     } else {
                         photoBlock.classList.add('hidden');
@@ -596,11 +592,7 @@
 
         function showKitPhotoIfNeeded(filmType, thickness) {
             const photoBlock = document.getElementById('kit-corpus-photo');
-            if (filmType === "Виниловая" && thickness === "Стандартная") {
-                photoBlock.innerHTML = '<div class="subtitle" style="color:var(--neon-pink)">🖼 Картинку выберете на месте (из наличия)</div>';
-                photoBlock.classList.remove('hidden');
-            } else if (filmType === "Виниловая" && thickness === "Противоударная") {
-                photoBlock.innerHTML = '<div class="subtitle" style="color:var(--neon-pink)">Картинка на месте</div>';
+            if (filmType === "Виниловая") {
                 photoBlock.classList.remove('hidden');
             } else {
                 photoBlock.classList.add('hidden');
@@ -729,13 +721,11 @@
                 renderAddons(); showStep('step-addons', 5);
             }
             else if (state.step === 4.5) {
-                // Переход от корпуса к экрану
                 if (!state.kit.corpusPrice) return;
                 renderKitScreen();
                 showStep('step-kit-screen', 4.6);
             }
             else if (state.step === 4.6) {
-                // Конец настройки комплекта
                 if (!state.kit.screenPrice) return;
                 renderAddons(); showStep('step-addons', 5);
             }
